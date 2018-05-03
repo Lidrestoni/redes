@@ -9,11 +9,12 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdlib.h>
 
 //void *mythread(void *data);
 
 #define N 3 // number of threads
-#define PROCC 6
+#define PROCC 2
 
 /*int x = 0;
 int main(void) {
@@ -32,18 +33,39 @@ int main(void) {
 }*/
 
 
-pid_t pid;
+//pid_t pid;
 void main(){
-	char *argv[] = {"./router","2"};
-	if ((pid=fork())!=0){
-		printf("\n I am the father of %d\n", pid);
-		waitpid(pid,NULL,0);
-		return;
+	int pid,i;
+	char *argv[] = {"/router","1", NULL};
+	for(i=1; i<=PROCC; i++){
+		pid=(int)fork();
+		if(pid!=0){
+			printf("\n I am the father of (%d)%d\n", i,pid);
+			waitpid((pid_t)pid,NULL,0);
+			printf("%d returned!\n", i);
+			return;
+		}
+		else{
+			int k, a;
+			char x[5];
+			for(k=0; k<98765432; k++)
+				a+=2-3;
+			printf("(%d)Child\n",i);
+			sprintf(x,"%d", i);
+			argv[1]=x;
+			printf("%s %s=%s\n", argv[0], argv[1], x);
+			/*if(execv("./router",argv)==-1)
+				printf("Err");*/
+		}
+		printf("->%d<-\n",i);
 	}
-	else{
-		printf("I am the son, and I'm like my father");
-		execv("./router",argv);
-	}
+	/*if(pid==0){
+		int k, a;
+			for(k=0; k<98765432; k++)
+				a+=2-3;
+		printf("(%d)Child\n",i);
+		//execv("./router",argv);
+	}*/
 }
 
 /*int main(){
