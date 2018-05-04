@@ -33,8 +33,35 @@ int main(void) {
 }*/
 
 
-//pid_t pid;
 void main(){
+	int pid[PROCC+3],i;
+	char *argv[] = {"/router","1", NULL};
+	for(i=1; i<=PROCC; i++){
+		if((pid[i]=(int)fork())==0){
+			int k, a;
+			char x[5];
+			for(k=0; k<98765432; k++)
+				a+=2-3;
+			printf("(%d:%d)Child\n",i, pid[i]);
+			sprintf(x,"%d", i);
+			argv[1]=x;
+			printf("%s %s=%s\n", argv[0], argv[1], x);
+			if(execv("./router",argv)==-1)
+				printf("Err");
+			return;
+		}
+	}
+	int n = PROCC, idP;
+	while(n){
+		idP=wait(NULL);
+		printf("Child %d returned!\n", idP);
+		n--;
+	}
+	return;
+}
+
+//pid_t pid;
+/*void main(){
 	int pid,i;
 	char *argv[] = {"/router","1", NULL};
 	for(i=1; i<=PROCC; i++){
@@ -54,19 +81,19 @@ void main(){
 			sprintf(x,"%d", i);
 			argv[1]=x;
 			printf("%s %s=%s\n", argv[0], argv[1], x);
-			/*if(execv("./router",argv)==-1)
-				printf("Err");*/
+			*if(execv("./router",argv)==-1)
+				printf("Err");*
 		}
 		printf("->%d<-\n",i);
 	}
-	/*if(pid==0){
+	*if(pid==0){
 		int k, a;
 			for(k=0; k<98765432; k++)
 				a+=2-3;
 		printf("(%d)Child\n",i);
 		//execv("./router",argv);
-	}*/
-}
+	}*
+}*/
 
 /*int main(){
 	int proc, i;
