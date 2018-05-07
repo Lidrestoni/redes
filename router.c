@@ -12,8 +12,9 @@
 #define BUFLEN 512  //Max length of buffer
 #define PORT 8888   //The port on which to listen for incoming data
 
-#define NROUTERS 9+1
 #define INF 11234567
+
+int NROUTERS;
 
 
 struct AdjNode{
@@ -167,8 +168,8 @@ int dijkstra(struct AdjList *graph[], int s, int d){
 		}
 		while(node->next!=NULL, node = node->next);
 		if(!selSize){
-			printf("Erro: destino não encontrado!");
-			return -1;
+			printf("Erro: destino do roteador %d não foi encontrado!", s);
+			exit(1);
 		}
 		s = *selDests[0];
 		removeElementIn(0, selSize-1, selCosts, selDests, selCompVect);
@@ -192,15 +193,19 @@ void die(char *s)
     exit(1);
 }
  
-/*Argumentos: 1: Número do roteador*/
+/*Argumentos: 1: Número do roteador, 2: Número de roteadores*/
 int main(int argc, char **argv)
 {	
 	if(argc<2){
 		printf("Too few arguments to start router!\n");
 		exit(1);	
 	}
+	if(argc==2)
+		NROUTERS = 9+1;
+	else
+		NROUTERS = atoi(argv[2])+1;
 	int i, t[3];	
-
+	
 	struct AdjList *graph[NROUTERS];
 	for(i=0; i<NROUTERS; i++)
 		graph[i] = NULL;
@@ -210,7 +215,7 @@ int main(int argc, char **argv)
 	char ip[10];
     FILE *fp = fopen("roteador.config", "r");
 	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");
+		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
 		exit(1);
 	}
 	do
@@ -221,22 +226,21 @@ int main(int argc, char **argv)
 	while(t[0]!=router);
 	fclose(fp);
 	printf("%d %d %s\n", t[0], t[1], ip);
-
+	
 	fp = fopen("enlaces2.config", "r");
 	if(fp==NULL){
 		printf("Não foi possível abrir o arquivo \"enlaces2.config\"\n");
 		exit(1);
 	}
-	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF){
+	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF)
 		addToGraph(graph, t[0],t[1],t[2]);
-	}
-	fclose(fp);	
-
+	fclose(fp);
 	int to = dijkstra(graph, router, 9);
-	printf("Mandar pacote para %d\n", to);
+	printf("Router %d: Mandar pacote para %d\n", router, to);
     int s, slen = sizeof(si_other) , recv_len;
     char buf[BUFLEN];
-     return 0;
+ 	
+	
     //create a UDP socket
     if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {

@@ -2,19 +2,15 @@
  * gcc -o thread thread.c -lpthread */
 /* We always need to include this header file for<\n>
  * the threads */
-#include <pthread.h>
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/time.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <stdlib.h>
+
 
 //void *mythread(void *data);
 
 #define N 3 // number of threads
-#define PROCC 2
+#define NROUTERS 9
 
 /*int x = 0;
 int main(void) {
@@ -34,27 +30,30 @@ int main(void) {
 
 
 void main(){
-	int pid[PROCC+3],i;
+	char x[5];
+	sprintf(x,"%d", NROUTERS);
+	int i;
+	pid_t pid;printf("[%s]", x);
 	char *argv[] = {"/router","1", NULL};
-	for(i=1; i<=PROCC; i++){
-		if((pid[i]=(int)fork())==0){
-			int k, a;
-			char x[5];
+	for(i=1; i<=NROUTERS; i++){
+		if((pid = fork())==0){
+			/*int k, a;
 			for(k=0; k<98765432; k++)
-				a+=2-3;
-			printf("(%d:%d)Child\n",i, pid[i]);
+				a+=2-3;*/
+			//printf("(%d:%d)Child\n",i, pid[i]);
 			sprintf(x,"%d", i);
 			argv[1]=x;
-			printf("%s %s=%s\n", argv[0], argv[1], x);
-			if(execv("./router",argv)==-1)
+			//printf("%s %s=%s\n", argv[0], argv[1], x);
+			
+			execvp("./router",argv);
 				printf("Err");
 			return;
 		}
 	}
-	int n = PROCC, idP;
+	int n = NROUTERS, idP;
 	while(n){
 		idP=wait(NULL);
-		printf("Child %d returned!\n", idP);
+		//printf("Child %d returned!\n", idP);
 		n--;
 	}
 	return;
@@ -64,7 +63,7 @@ void main(){
 /*void main(){
 	int pid,i;
 	char *argv[] = {"/router","1", NULL};
-	for(i=1; i<=PROCC; i++){
+	for(i=1; i<=NROUTERS; i++){
 		pid=(int)fork();
 		if(pid!=0){
 			printf("\n I am the father of (%d)%d\n", i,pid);
@@ -97,7 +96,7 @@ void main(){
 
 /*int main(){
 	int proc, i;
-	for(i=0; i<PROCC; i++){
+	for(i=0; i<NROUTERS; i++){
 		proc=fork(tick[i]);
 		if(proc==0){
 			printf(1,"Waiting for process %d to terminate (%d)\n", i, uptime());
@@ -110,7 +109,7 @@ void main(){
 	}
 
 	if(proc!=0)
-		for(i=0; i<PROCC; i++)
+		for(i=0; i<NROUTERS; i++)
 			wait();
 	return 0;
 }*/
