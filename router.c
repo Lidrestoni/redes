@@ -38,10 +38,13 @@ int main(int argc, char **argv)
 	struct sockaddr_in si_me, si_other, si_dest;
 	int router = atoi(argv[1]);
 	char ip[10];
-	
+	PORT = -1;
+	PortsFromFile(&PORT, router, ip);
 	startGraphFromFile(graph);
 	int destPORT,destROUTER;
-		
+	
+
+	
 	int s, slen = sizeof(si_other) , recv_len;
 	char buf[BUFLEN];
 	
@@ -64,8 +67,11 @@ int main(int argc, char **argv)
 	memset((char *) &si_dest, 0, sizeof(si_dest));
 	si_dest.sin_family= AF_INET;	
 	
+	//si_dest.sin_port = htons(PORT);
+	si_dest.sin_addr.s_addr = htonl(INADDR_ANY);
+	
+	 struct UDPMessage mes;    
      
-     	struct UDPMessage mes;
 	//keep listening for data
 	while(1){
 		printf("Router %d] Waiting for data...\n", router);
@@ -83,30 +89,32 @@ int main(int argc, char **argv)
 		printf("Router %d] Received packet from %s:%d\n", router,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
 		printf("Router %d] Data: %s\n" , router,buf);
          	
-		
+		int k, a;
+			for(k=0; k<998765432; k++)
+				a+=2-3;
 
-		StrToUDPMessage (buf, &mes);	
-		printf("[%d %d %d %s]", mes.idMes, mes.idOrig, mes.idDest, mes.mess);
+
+		StrToUDPMessage (buf, &mes);
+		printf("<<<%d>>>", mes.idDest);
 		destROUTER = dijkstra(graph, router, mes.idDest);
 		if(destROUTER==-1)
 			exit(1);
 		else if(!destROUTER)
 			destROUTER=router;
-		destPORT = PORT = -1;
+		destPORT  = -1;
 		printf("Router %d: Mandar pacote para %d\n", router, destROUTER);
 
-		ODfromFile(&PORT, &destPORT, router, destROUTER, ip);
-	
-
+		//ODfromFile(&PORT, &destPORT, router, destROUTER, ip);
+		PortsFromFile(&destPORT, destROUTER, ip);
 		si_dest.sin_port = htons(destPORT);
-		si_dest.sin_addr.s_addr = htonl(INADDR_ANY);
-	
 		if (inet_aton(ip , &si_dest.sin_addr) == 0){
 			fprintf(stderr, "inet_aton() failed\n");
 			exit(1);
 		}
 
 
+
+	
 		//now reply the client with the same data
 		if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_dest, slen) == -1){
 			die("sendto()");
