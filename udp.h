@@ -12,7 +12,7 @@ char* UDPMessageToStr (struct UDPMessage m){
 }
 void StrToUDPMessage (char *a, struct UDPMessage *m){
 	int i=0, x[3], v=3;
-	char *p;
+	char *p, temp[103];
 	while(v--){
 		p = &a[i];
 		while(a[i]!=';')
@@ -23,5 +23,9 @@ void StrToUDPMessage (char *a, struct UDPMessage *m){
 		i++;
 	}
 	m->idMes=x[2]; m->idOrig = x[1]; m->idDest = x[0];
-	//strcpy(m->mess,&x[i]); *Ver isso depois*
+	int j=0;
+	while(a[i]!=';'&&a[i]!='\0')
+		temp[j++]=a[i++];
+	temp[j]='\0';
+	strcpy(m->mess,temp);
 }

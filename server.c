@@ -12,7 +12,6 @@
  
 
 #define BUFLEN 512  //Max length of buffer
-char *SERVER;
 int PORT;   //The port on which to send data
  
 void die(char *s){
@@ -22,9 +21,6 @@ void die(char *s){
  
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
 int main(int argc, char **argv){
-	//int nuser = atoi(argv[1]);
-	//char tc[10];
-
 
 	if(argc<2){
 		printf("Too few arguments to start router!\n");
@@ -38,25 +34,16 @@ int main(int argc, char **argv){
 	for(i=0; i<NROUTERS; i++)
 		graph[i] = NULL;
 
-	//struct sockaddr_in si_me, si_other, si_dest;
 	int nuser = atoi(argv[1]);
-	char tc[10];
+	char *SERVER, *ipdest;
 	
 	startGraphFromFile(graph);
-	int destPORT,destROUTER = dijkstra(graph, nuser, 9);
+	int destPORT,destROUTER;
 
-
-	if(destROUTER==-1)
-		exit(1);
-	else if(!destROUTER)
-		destROUTER=nuser;
-	destPORT = PORT = -1;
-	ODfromFile(&PORT, &destPORT, nuser, destROUTER, tc);
-
+	PORT = -1;
+	PortsFromFile(&PORT, nuser, &SERVER);
 	
 
-
-	SERVER = tc;	
 	struct sockaddr_in si_other, si_me;
 	int s, slen=sizeof(si_other), recv_len;
 	char buf[BUFLEN];
@@ -66,7 +53,6 @@ int main(int argc, char **argv){
 		die("socket");
 	}
  
-
 	// zero out the structure
 	memset((char *) &si_me, 0, sizeof(si_me));
 	si_me.sin_family = AF_INET;
@@ -80,7 +66,6 @@ int main(int argc, char **argv){
 
 	memset((char *) &si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(destPORT);
      
 	if (inet_aton(SERVER , &si_other.sin_addr) == 0){
 		fprintf(stderr, "inet_aton() failed\n");
@@ -90,7 +75,6 @@ int main(int argc, char **argv){
 	struct UDPMessage mes;
 	while(1){
 		fflush(stdout);
-		//receive a reply and print it
 		//clear the buffer by filling null, it might have previously received data
 		memset(buf,'\0', BUFLEN);
 
@@ -98,8 +82,6 @@ int main(int argc, char **argv){
 		if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1){
 			die("recvfrom()");
 		}
-         
-		//print details of the client/peer and the data received
          	
 		int k, a;
 			for(k=0; k<998765432; k++)
@@ -108,6 +90,16 @@ int main(int argc, char **argv){
 		temp = mes.idDest;
 		mes.idDest = mes.idOrig;
 		mes.idOrig = temp;
+
+		destROUTER = dijkstra(graph, nuser, mes.idDest);
+		if(destROUTER==-1)
+			exit(1);
+		else if(!destROUTER)
+			destROUTER=nuser;
+		destPORT = -1;
+		PortsFromFile(&destPORT, destROUTER, &ipdest);
+		si_other.sin_port = htons(destPORT);
+
 		message = UDPMessageToStr(mes);
 		printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", router,mes.idMes,destROUTER, mes.idDest);
 		//now reply the client with the same data

@@ -12,15 +12,12 @@ void main(){
 	char *argv[] = {"X","X",routers, NULL};
 	for(i=1; i<=NROUTERS+2; i++){
 		if((pid = fork())==0){
-			/*int k, a;
-			for(k=0; k<98765432; k++)
-				a+=2-3;*/
-			//printf("(%d:%d)Child\n",i, pid[i]);
 			sprintf(x,"%d", i);
 			argv[1]=x;
-			//printf("%s %s=%s\n", argv[0], argv[1], x);
-			if(i==userId)
-				execvp("./userserver", argv);
+			if(i==userId){
+				printf("Please:  Open a new terminal window in this folder and execute the following command:\n./userserver %s %s\n", argv[1], argv[2]); return;
+				//execvp("./userserver", argv);
+			}
 			else if(i==serverId)
 				execvp("./server", argv);
 			else
@@ -32,7 +29,6 @@ void main(){
 	int n = NROUTERS+2, idP;
 	while(n){
 		idP=wait(NULL);
-		//printf("Child %d returned!\n", idP);
 		n--;
 	}
 	return;

@@ -37,13 +37,11 @@ int main(int argc, char **argv)
 
 	struct sockaddr_in si_me, si_other, si_dest;
 	int router = atoi(argv[1]);
-	char ip[10];
+	char *ipdest, *iprouter;
 	PORT = -1;
-	PortsFromFile(&PORT, router, ip);
+	PortsFromFile(&PORT, router, &iprouter);
 	startGraphFromFile(graph);
 	int destPORT,destROUTER;
-	
-
 	
 	int s, slen = sizeof(si_other) , recv_len;
 	char buf[BUFLEN];
@@ -67,7 +65,6 @@ int main(int argc, char **argv)
 	memset((char *) &si_dest, 0, sizeof(si_dest));
 	si_dest.sin_family= AF_INET;	
 	
-	//si_dest.sin_port = htons(PORT);
 	si_dest.sin_addr.s_addr = htonl(INADDR_ANY);
 	
 	 struct UDPMessage mes;    
@@ -75,7 +72,6 @@ int main(int argc, char **argv)
 	//keep listening for data
 	while(1){
 		fflush(stdout);
-		//receive a reply and print it
 		//clear the buffer by filling null, it might have previously received data
 		memset(buf,'\0', BUFLEN);
 
@@ -98,18 +94,15 @@ int main(int argc, char **argv)
 		destPORT  = -1;
 
 		//ODfromFile(&PORT, &destPORT, router, destROUTER, ip);
-		PortsFromFile(&destPORT, destROUTER, ip);
+		PortsFromFile(&destPORT, destROUTER, &ipdest);
 		si_dest.sin_port = htons(destPORT);
-		if (inet_aton(ip , &si_dest.sin_addr) == 0){
+		if (inet_aton(ipdest , &si_dest.sin_addr) == 0){
 			fprintf(stderr, "inet_aton() failed\n");
 			exit(1);
 		}
-
-
-
 	
 		//now send data forward
-		printf("Roteador %d encaminhando mensagem com # de sequência %d para o destino %d\n", router,mes.idMes, mes.idDest);
+		printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", router,mes.idMes,destROUTER, mes.idDest);
 		if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_dest, slen) == -1){
 			die("sendto()");
 		}

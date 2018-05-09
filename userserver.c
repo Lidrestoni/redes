@@ -15,6 +15,7 @@
 
 int argc;
 char **argv;
+size_t messageSize = 100;
 
 int LastID=0, destServer = 9;
 #define BUFLEN 512  //Max length of buffer
@@ -29,13 +30,12 @@ void die(char *s){
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
 struct sockaddr_in si_other, si_me;
 int nuser, s;
-char tc[10];
+
 int main2(int id){
 	struct AdjList *graph[NROUTERS];
 	int i;
 	for(i=0; i<NROUTERS; i++)
 		graph[i] = NULL;
-	//struct sockaddr_in si_me, si_other, si_dest;
 		
 	startGraphFromFile(graph);
 	int destPORT,destROUTER;
@@ -43,7 +43,6 @@ int main2(int id){
 	
 	int slen=sizeof(si_other), recv_len;
 	char buf[BUFLEN];
-	//char message[BUFLEN];
  
     memset((char *) &si_other, 0, sizeof(si_other));
     si_other.sin_family = AF_INET;
@@ -57,6 +56,7 @@ int main2(int id){
 
 	struct UDPMessage mes;
 	char *message;
+	char *destIP;
 	while(1){
 
 		destROUTER = dijkstra(graph, nuser, destServer);
@@ -65,31 +65,17 @@ int main2(int id){
 		else if(!destROUTER)
 			destROUTER=nuser;
 		destPORT = -1;		
-		PortsFromFile(&destPORT, destROUTER, tc);
+		PortsFromFile(&destPORT, destROUTER, &destIP);
 		si_other.sin_port = htons(destPORT);
 
 		if(id==1){
-			//fflush(stdout);
-			//receive a reply and print it
-			//clear the buffer by filling null, it might have previously received data
 			memset(buf,'\0', BUFLEN);
-
 			//try to receive some data, this is a blocking call
-			if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1){
+			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1){
 				die("recvfrom()");
 			}
-                  	
-			int k, a;
-				for(k=0; k<998765432; k++)
-					a+=2-3;
-
 			StrToUDPMessage (buf, &mes);
-			
-			//now reply the client with the same data
-			if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1){
-				die("sendto()");
-			}
-
+			printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
 		}
 		else{
 			mes.idMes =  LastID++;
@@ -97,37 +83,23 @@ int main2(int id){
 			mes.idDest = destServer;
 			fflush(stdout);
 			printf("Enter message : ");
-			//gets(message);
-			scanf("%s",mes.mess);
+			fflush(stdout);
+			getline(&message, &messageSize, stdin);
+			fflush(stdout);
+			strcpy(mes.mess,message);
 			message = UDPMessageToStr(mes);
          
-			//StrToUDPMessage (message, &mes);
 			//send the message
-			printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", nuser,mes.idMes,destROUTER, mes.idDest);
+			printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", nuser,mes.idMes,destROUTER, mes.idDest);
 			if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1){
 				die("sendto()");
 			}
-         
-			//receive a reply and print it
-			//clear the buffer by filling null, it might have previously received data
-			memset(buf,'\0', BUFLEN);
-			//try to receive some data, this is a blocking call
-			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1){
-				die("recvfrom()");
-			}
-			puts(buf);
 		}
 	}
  
 	close(s);
 	return 0;
 }
-
-
-
-
-
-
 
 void *mythread(void *data);
 
@@ -149,8 +121,7 @@ int main(int argc2, char **argv2) {
 		
 	nuser = atoi(argv[1]);
 	PORT = -1;	
-	PortsFromFile(&PORT, nuser, tc);
-	SERVER = tc;	
+	PortsFromFile(&PORT, nuser, &SERVER);	
 
 	if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{

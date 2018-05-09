@@ -193,38 +193,16 @@ void startGraphFromFile(struct AdjList *graph[]){
 	fclose(fp);
 }
 
-void ODfromFile( int *PORT, int *destPORT, int router, int destROUTER, char *ip){
+void PortsFromFile( int *PORT, int router, char **ip){
 	int t[2];
+	*ip = malloc(sizeof(char)*10);
 	FILE *fp = fopen("roteador.config", "r");
 	if(fp==NULL){
 		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
 		exit(1);
 	}
 	do{
-		if(fscanf(fp,"%d %d %s ", &t[0], &t[1], ip)==EOF){
-			printf("ERRO: O roteador %d ou %d não foi encontrado!", router, destROUTER);			
-			exit(1);
-		}
-		if(t[0]==router){
-			*PORT = t[1];		
-		}
-		if(t[0]==destROUTER){
-			*destPORT = t[1];
-		}
-	}
-	while(*destPORT==-1||*PORT==-1);
-	fclose(fp);
-}
-
-void PortsFromFile( int *PORT, int router, char *ip){
-	int t[2];
-	FILE *fp = fopen("roteador.config", "r");
-	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
-		exit(1);
-	}
-	do{
-		if(fscanf(fp,"%d %d %s ", &t[0], &t[1], ip)==EOF){
+		if(fscanf(fp,"%d %d %s ", &t[0], &t[1], *ip)==EOF){
 			printf("ERRO: O roteador %d não foi encontrado!", router);			
 			exit(1);
 		}
