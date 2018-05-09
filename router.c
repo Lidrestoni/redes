@@ -95,14 +95,14 @@ int main(int argc, char **argv)
 
 
 		StrToUDPMessage (buf, &mes);
-		printf("<<<%d>>>", mes.idDest);
+		printf("<<<%d;%d;%d;%s>>>", mes.idMes,mes.idOrig,mes.idDest, mes.mess);
 		destROUTER = dijkstra(graph, router, mes.idDest);
 		if(destROUTER==-1)
 			exit(1);
 		else if(!destROUTER)
 			destROUTER=router;
 		destPORT  = -1;
-		printf("Router %d: Mandar pacote para %d\n", router, destROUTER);
+		printf("Router %d: Mandar pacote [%s]para %d\n", router,buf, destROUTER);
 
 		//ODfromFile(&PORT, &destPORT, router, destROUTER, ip);
 		PortsFromFile(&destPORT, destROUTER, ip);

@@ -1,6 +1,6 @@
 /*
-    Simple udp client
-    Silver Moon (m00n.silv3r@gmail.com)
+	Simple udp client
+	Silver Moon (m00n.silv3r@gmail.com)
 */
 #include<stdio.h> //printf
 #include<string.h> //memset
@@ -15,15 +15,13 @@ int LastID=0, destServer = 9;
 char *SERVER;
 int PORT;   //The port on which to send data
  
-void die(char *s)
-{
-    perror(s);
-    exit(1);
+void die(char *s){
+	perror(s);
+	exit(1);
 }
  
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
 	//int nuser = atoi(argv[1]);
 	//char tc[10];
 
@@ -96,35 +94,31 @@ int main(int argc, char **argv)
 
 	struct UDPMessage mes;
 	char *message;
-    while(1)
-    {
-        mes.idMes =  LastID++;
-	mes.idOrig = nuser;
-	mes.idDest = destServer;
-	printf("Enter message : ");
-        //gets(message);
-        scanf("%s",mes.mess);
-	message = UDPMessageToStr(mes);
+	while(1){
+		mes.idMes =  LastID++;
+		mes.idOrig = nuser;
+		mes.idDest = destServer;
+		printf("Enter message : ");
+		//gets(message);
+		scanf("%s",mes.mess);
+		message = UDPMessageToStr(mes);
          
-	//StrToUDPMessage (message, &mes);
-        //send the message
-        if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
-        {
-            die("sendto()");
-        }
+		//StrToUDPMessage (message, &mes);
+		//send the message
+		if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1){
+			die("sendto()");
+		}
          
-        //receive a reply and print it
-        //clear the buffer by filling null, it might have previously received data
-        memset(buf,'\0', BUFLEN);
-        //try to receive some data, this is a blocking call
-        if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1)
-        {
-            die("recvfrom()");
-        }
-         
-        puts(buf);
-    }
+		//receive a reply and print it
+		//clear the buffer by filling null, it might have previously received data
+		memset(buf,'\0', BUFLEN);
+		//try to receive some data, this is a blocking call
+		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1){
+			die("recvfrom()");
+		}
+		puts(buf);
+	}
  
-    close(s);
-    return 0;
+	close(s);
+	return 0;
 }

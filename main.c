@@ -20,7 +20,7 @@ void main(){
 			argv[1]=x;
 			//printf("%s %s=%s\n", argv[0], argv[1], x);
 			if(i==userId)
-				execvp("./user", argv);
+				execvp("./userserver", argv);
 			else if(i==serverId)
 				execvp("./server", argv);
 			else

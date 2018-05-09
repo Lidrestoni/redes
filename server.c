@@ -15,15 +15,13 @@
 char *SERVER;
 int PORT;   //The port on which to send data
  
-void die(char *s)
-{
-    perror(s);
-    exit(1);
+void die(char *s){
+	perror(s);
+	exit(1);
 }
  
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
 	//int nuser = atoi(argv[1]);
 	//char tc[10];
 
@@ -64,10 +62,9 @@ int main(int argc, char **argv)
 	struct sockaddr_in si_other, si_me;
 	int s, slen=sizeof(si_other), recv_len;
 	char buf[BUFLEN];
-	char message[BUFLEN];
+	char *message;
  
-	if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-	{
+	if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
 		die("socket");
 	}
  
@@ -83,20 +80,17 @@ int main(int argc, char **argv)
 		die("bind");
 	}
 
-
-
-
-    memset((char *) &si_other, 0, sizeof(si_other));
-    si_other.sin_family = AF_INET;
-    si_other.sin_port = htons(destPORT);
+	memset((char *) &si_other, 0, sizeof(si_other));
+	si_other.sin_family = AF_INET;
+	si_other.sin_port = htons(destPORT);
      
-    if (inet_aton(SERVER , &si_other.sin_addr) == 0) 
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
- int router = 9;
-while(1){
+	if (inet_aton(SERVER , &si_other.sin_addr) == 0){
+		fprintf(stderr, "inet_aton() failed\n");
+		exit(1);
+	}
+	int router = 9, temp;
+	struct UDPMessage mes;
+	while(1){
 		printf("Router %d] Waiting for data...\n", router);
 		fflush(stdout);
 		//receive a reply and print it
@@ -115,13 +109,19 @@ while(1){
 		int k, a;
 			for(k=0; k<998765432; k++)
 				a+=2-3;
+		StrToUDPMessage (buf, &mes);
+		temp = mes.idDest;
+		mes.idDest = mes.idOrig;
+		mes.idOrig = temp;
+		printf("<<<%d;%d;%d;%s>>>", mes.idMes,mes.idOrig,mes.idDest, mes.mess);
+		message = UDPMessageToStr(mes);
 	
 		//now reply the client with the same data
-		/*if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_dest, slen) == -1){
+		if (sendto(s, message, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1){
 			die("sendto()");
-		}*/
+		}
 	}
- 
-    close(s);
-    return 0;
+ 	
+	close(s);
+	return 0;
 }
