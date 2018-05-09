@@ -74,7 +74,6 @@ int main(int argc, char **argv)
      
 	//keep listening for data
 	while(1){
-		printf("Router %d] Waiting for data...\n", router);
 		fflush(stdout);
 		//receive a reply and print it
 		//clear the buffer by filling null, it might have previously received data
@@ -84,10 +83,6 @@ int main(int argc, char **argv)
 		if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1){
 			die("recvfrom()");
 		}
-         
-		//print details of the client/peer and the data received
-		printf("Router %d] Received packet from %s:%d\n", router,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-		printf("Router %d] Data: %s\n" , router,buf);
          	
 		int k, a;
 			for(k=0; k<998765432; k++)
@@ -95,14 +90,12 @@ int main(int argc, char **argv)
 
 
 		StrToUDPMessage (buf, &mes);
-		printf("<<<%d;%d;%d;%s>>>", mes.idMes,mes.idOrig,mes.idDest, mes.mess);
 		destROUTER = dijkstra(graph, router, mes.idDest);
 		if(destROUTER==-1)
 			exit(1);
 		else if(!destROUTER)
 			destROUTER=router;
 		destPORT  = -1;
-		printf("Router %d: Mandar pacote [%s]para %d\n", router,buf, destROUTER);
 
 		//ODfromFile(&PORT, &destPORT, router, destROUTER, ip);
 		PortsFromFile(&destPORT, destROUTER, ip);
@@ -115,7 +108,8 @@ int main(int argc, char **argv)
 
 
 	
-		//now reply the client with the same data
+		//now send data forward
+		printf("Roteador %d encaminhando mensagem com # de sequência %d para o destino %d\n", router,mes.idMes, mes.idDest);
 		if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_dest, slen) == -1){
 			die("sendto()");
 		}

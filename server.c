@@ -51,14 +51,12 @@ int main(int argc, char **argv){
 	else if(!destROUTER)
 		destROUTER=nuser;
 	destPORT = PORT = -1;
-	printf("Router %d: Mandar pacote para %d\n", nuser, destROUTER);
 	ODfromFile(&PORT, &destPORT, nuser, destROUTER, tc);
 
 	
 
 
 	SERVER = tc;	
-	printf("\n%d %d %s\n\n", nuser,PORT, SERVER);
 	struct sockaddr_in si_other, si_me;
 	int s, slen=sizeof(si_other), recv_len;
 	char buf[BUFLEN];
@@ -91,7 +89,6 @@ int main(int argc, char **argv){
 	int router = 9, temp;
 	struct UDPMessage mes;
 	while(1){
-		printf("Router %d] Waiting for data...\n", router);
 		fflush(stdout);
 		//receive a reply and print it
 		//clear the buffer by filling null, it might have previously received data
@@ -103,8 +100,6 @@ int main(int argc, char **argv){
 		}
          
 		//print details of the client/peer and the data received
-		printf("Router %d] Received packet from %s:%d\n", router,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-		printf("Router %d] Data: %s\n" , router,buf);
          	
 		int k, a;
 			for(k=0; k<998765432; k++)
@@ -113,9 +108,8 @@ int main(int argc, char **argv){
 		temp = mes.idDest;
 		mes.idDest = mes.idOrig;
 		mes.idOrig = temp;
-		printf("<<<%d;%d;%d;%s>>>", mes.idMes,mes.idOrig,mes.idDest, mes.mess);
 		message = UDPMessageToStr(mes);
-	
+		printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", router,mes.idMes,destROUTER, mes.idDest);
 		//now reply the client with the same data
 		if (sendto(s, message, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1){
 			die("sendto()");

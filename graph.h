@@ -121,7 +121,7 @@ void addToGraph(struct AdjList **graph, int dest1, int dest2, int cost){
 	addToAdjList(&graph[dest2], dest1, cost);
 }
 
-int dijkstra(struct AdjList *graph[], int s, int d){printf("[%d %d]", s, d);
+int dijkstra(struct AdjList *graph[], int s, int d){
 	/*Nesse algoritmo selCosts and selDests representam todos os vizinhos que podemos visitar pelos caminhos até então percorridos, e selSize é a quantidade desses vizinhos. selCompVector é uma forma rápida de identificar qual o índice de certo nodo em selDests e SelCosts (-1 significa que está ausente) 
 Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais retorna 0, demais casos retorna o próximo s que irá para o caminho mais curto.
 
@@ -212,7 +212,7 @@ void ODfromFile( int *PORT, int *destPORT, int router, int destROUTER, char *ip)
 			*destPORT = t[1];
 		}
 	}
-	while(*destPORT==-1||*PORT==-1); printf("From %d to %d\n", *PORT, *destPORT);
+	while(*destPORT==-1||*PORT==-1);
 	fclose(fp);
 }
 

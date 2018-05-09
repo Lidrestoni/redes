@@ -59,22 +59,17 @@ int main2(int id){
 	char *message;
 	while(1){
 
-
 		destROUTER = dijkstra(graph, nuser, destServer);
 		if(destROUTER==-1)
 			exit(1);
 		else if(!destROUTER)
 			destROUTER=nuser;
-		printf("Router %d: Mandar pacote para %d\n", nuser, destROUTER);
 		destPORT = -1;		
-		PortsFromFile(&destPORT, destROUTER, tc);printf("{DestPor:%d}", destPORT);
+		PortsFromFile(&destPORT, destROUTER, tc);
 		si_other.sin_port = htons(destPORT);
 
-
-
 		if(id==1){
-			printf("Router %d] Waiting for data...\n", nuser);
-			fflush(stdout);
+			//fflush(stdout);
 			//receive a reply and print it
 			//clear the buffer by filling null, it might have previously received data
 			memset(buf,'\0', BUFLEN);
@@ -83,18 +78,12 @@ int main2(int id){
 			if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1){
 				die("recvfrom()");
 			}
-         
-			//print details of the client/peer and the data received
-			printf("Router %d] Received packet from %s:%d\n", nuser,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-			printf("Router %d] Data: %s\n" , nuser,buf);
-         	
+                  	
 			int k, a;
 				for(k=0; k<998765432; k++)
 					a+=2-3;
 
-
 			StrToUDPMessage (buf, &mes);
-			printf("<<<%d;%d;%d;%s>>>", mes.idMes,mes.idOrig,mes.idDest, mes.mess);
 			
 			//now reply the client with the same data
 			if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1){
@@ -102,24 +91,11 @@ int main2(int id){
 			}
 
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-		if(id==2){
+		else{
 			mes.idMes =  LastID++;
 			mes.idOrig = nuser;
 			mes.idDest = destServer;
+			fflush(stdout);
 			printf("Enter message : ");
 			//gets(message);
 			scanf("%s",mes.mess);
@@ -127,6 +103,7 @@ int main2(int id){
          
 			//StrToUDPMessage (message, &mes);
 			//send the message
+			printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", nuser,mes.idMes,destROUTER, mes.idDest);
 			if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1){
 				die("sendto()");
 			}
@@ -174,7 +151,6 @@ int main(int argc2, char **argv2) {
 	PORT = -1;	
 	PortsFromFile(&PORT, nuser, tc);
 	SERVER = tc;	
-	printf("\n%d %d %s\n\n", nuser,PORT, SERVER);
 
 	if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{
