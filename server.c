@@ -12,6 +12,7 @@
  
 
 #define BUFLEN 512  //Max length of buffer
+static time_t SERVERDELAY =1;
 int PORT;   //The port on which to send data
  
 void die(char *s){
@@ -74,7 +75,6 @@ int main(int argc, char **argv){
 	int router = 9, temp;
 	struct UDPMessage mes;
 	while(1){
-		fflush(stdout);
 		//clear the buffer by filling null, it might have previously received data
 		memset(buf,'\0', BUFLEN);
 
@@ -83,9 +83,6 @@ int main(int argc, char **argv){
 			die("recvfrom()");
 		}
          	
-		int k, a;
-			for(k=0; k<998765432; k++)
-				a+=2-3;
 		StrToUDPMessage (buf, &mes);
 		temp = mes.idDest;
 		mes.idDest = mes.idOrig;
@@ -101,6 +98,8 @@ int main(int argc, char **argv){
 		si_other.sin_port = htons(destPORT);
 
 		message = UDPMessageToStr(mes);
+
+		sleep(SERVERDELAY);
 		printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n", router,mes.idMes,destROUTER, mes.idDest);
 		//now reply the client with the same data
 		if (sendto(s, message, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1){

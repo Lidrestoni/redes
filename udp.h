@@ -1,13 +1,13 @@
 #include <string.h>
+static int messageTotalLen = 3*sizeof(int)+101*sizeof(char);
 struct UDPMessage{
 	int idMes,idOrig,idDest;
 	char mess[101];
 };
 
 char* UDPMessageToStr (struct UDPMessage m){
-	int len = 3*sizeof(int)+101*sizeof(char);
-	char *apstr = malloc(len);
-	snprintf (apstr, len+1, "%d;%d;%d;%s;", m.idMes,m.idOrig, m.idDest, m.mess);
+	char *apstr = malloc(messageTotalLen);
+	snprintf (apstr, messageTotalLen+1, "%d;%d;%d;%s;", m.idMes,m.idOrig, m.idDest, m.mess); 
 	return apstr;
 }
 void StrToUDPMessage (char *a, struct UDPMessage *m){

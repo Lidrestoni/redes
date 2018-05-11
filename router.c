@@ -12,7 +12,7 @@
  
 #define BUFLEN 512  //Max length of buffer
 
-
+static time_t ROUTERDELAY = 1;
 
 void die(char *s)
 {
@@ -80,9 +80,7 @@ int main(int argc, char **argv)
 			die("recvfrom()");
 		}
          	
-		int k, a;
-			for(k=0; k<998765432; k++)
-				a+=2-3;
+		sleep(ROUTERDELAY);
 
 
 		StrToUDPMessage (buf, &mes);

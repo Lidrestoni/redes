@@ -10,12 +10,93 @@
 #include <sys/time.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
+#include<time.h>
 #include"graph.h"
 #include"udp.h"
 
+
+static time_t TIMEOUT = 10; 
+/*Estrutura utilizada para conferir o timeout*/
+struct messConfs{
+	int idMes;
+	time_t time;
+	char *arrayMes;
+	struct messConfs *next, *prev;
+};
+
+struct messConfs *Confs;
+
+void rmThisConfs(struct messConfs *node){
+	if(node->prev==NULL&&node->next==NULL){
+		free(node);
+		Confs=NULL;	
+		return;
+	}
+	if(node->prev==NULL)
+		Confs=node->next;
+	else
+		node->prev->next = node->next;
+	if(node->next!=NULL)
+		node->next->prev = node->prev;
+	free(node);
+}
+
+void rmThisId(int id){
+	struct messConfs *it = Confs;
+	while(it!=NULL&&it->idMes!=id)
+		it=it->next;
+	if(it->idMes==id)
+		rmThisConfs(it);
+}
+
+void addConfs(int idMes, char *mes){
+	if(Confs==NULL){
+		Confs = malloc(sizeof(struct messConfs));
+		Confs->idMes = idMes;
+		Confs->time = time(NULL);
+		Confs->arrayMes = malloc(sizeof(mes));
+		strcpy(Confs->arrayMes,mes);
+		Confs->prev = Confs->next = NULL;	
+	}
+	else{
+		struct messConfs *iterator = Confs;
+		while(iterator->next!=NULL)
+			iterator = iterator->next;
+		iterator->next = malloc(sizeof(struct messConfs));
+		iterator->next->idMes = idMes;
+		iterator->next->time = time(NULL);
+		iterator->next->arrayMes = malloc(sizeof(mes));
+		strcpy(iterator->next->arrayMes,mes);
+		iterator->next->next=NULL;
+		iterator->next->prev = iterator;
+	}
+}
+
+struct messConfs* getConfsN(struct messConfs *it){
+	if(it==NULL)
+		return Confs;
+	return it->next;
+}
+
+void printAllConfs(){
+	if(Confs==NULL){
+		printf("Sem confirmações pendentes\n");
+		fflush(stdout);
+	}
+	else{
+		struct messConfs *it = NULL;
+		printf("\n\n\n-------------------------------\n");
+		while((it=getConfsN(it))!=NULL){
+			printf("Id: %d\nTime: %d\nMessage:\"%s\"\n", it->idMes, (int)it->time, it->arrayMes);
+			fflush(stdout);
+		}
+		printf("\n-------------------------------\n\n\n");
+	}
+}
+
 int argc;
 char **argv;
-size_t messageSize = 100;
+static size_t messageSize = 100;
 
 int LastID=0, destServer = 9;
 #define BUFLEN 512  //Max length of buffer
@@ -76,12 +157,13 @@ int main2(int id){
 			}
 			StrToUDPMessage (buf, &mes);
 			printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
+			rmThisId(mes.idMes);
+			//rmThisConfs(Confs);
 		}
-		else{
+		else if(id==2){
 			mes.idMes =  LastID++;
 			mes.idOrig = nuser;
 			mes.idDest = destServer;
-			fflush(stdout);
 			printf("Enter message : ");
 			fflush(stdout);
 			getline(&message, &messageSize, stdin);
@@ -91,10 +173,26 @@ int main2(int id){
          
 			//send the message
 			printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", nuser,mes.idMes,destROUTER, mes.idDest);
+			addConfs(mes.idMes, message);
 			if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1){
 				die("sendto()");
 			}
 		}
+		else{
+			int l,m;
+			while(1){
+				struct messConfs *it = NULL;
+				while((it=getConfsN(it))!=NULL){
+					if(((int)time(NULL))>((int)it->time)+((int)TIMEOUT)){
+						fprintf(stderr,"[%d]O pacote #%d deu timeout! Por isso será reenviado!\n",(int)time(NULL),Confs[m].idMes);
+						fflush(stdout);					
+						it->time = time(NULL);
+					}
+				}
+				sleep(2.5);
+				printAllConfs();
+			}
+		}		
 	}
  
 	close(s);
@@ -103,10 +201,10 @@ int main2(int id){
 
 void *mythread(void *data);
 
-#define N 2 // number of threads
+#define N 3 // number of threads
 
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
-int main(int argc2, char **argv2) {
+int main(int argc2, char **argv2){
 	argc = argc2;
 	argv = argv2;
 	pthread_t tids[N];
@@ -114,6 +212,7 @@ int main(int argc2, char **argv2) {
 	
 	if(argc<2){
 		printf("Too few arguments to start router!\n");
+		fflush(stdout);
 		exit(1);	
 	}
 	else
@@ -147,6 +246,7 @@ int main(int argc2, char **argv2) {
 	for(i=0; i<N; i++) {
 		pthread_join(tids[i], NULL);
 		printf("Thread id %ld returned\n", tids[i]);
+		fflush(stdout);
 	}
 	return(1);
 }
