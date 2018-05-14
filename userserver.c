@@ -15,7 +15,7 @@
 #include"udp.h"
 
 
-static time_t TIMEOUT = 10; 
+static time_t TIMEOUT = 1; 
 /*Estrutura utilizada para conferir o timeout*/
 struct messConfs{
 	int idMes;
@@ -27,6 +27,8 @@ struct messConfs{
 struct messConfs *Confs;
 
 void rmThisConfs(struct messConfs *node){
+	if(Confs==NULL)
+		return;
 	if(node->prev==NULL&&node->next==NULL){
 		free(node);
 		Confs=NULL;	
@@ -42,6 +44,8 @@ void rmThisConfs(struct messConfs *node){
 }
 
 void rmThisId(int id){
+	if(Confs==NULL)
+		return;
 	struct messConfs *it = Confs;
 	while(it!=NULL&&it->idMes!=id)
 		it=it->next;
@@ -158,7 +162,6 @@ int main2(int id){
 			StrToUDPMessage (buf, &mes);
 			printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
 			rmThisId(mes.idMes);
-			//rmThisConfs(Confs);
 		}
 		else if(id==2){
 			mes.idMes =  LastID++;
@@ -184,9 +187,26 @@ int main2(int id){
 				struct messConfs *it = NULL;
 				while((it=getConfsN(it))!=NULL){
 					if(((int)time(NULL))>((int)it->time)+((int)TIMEOUT)){
-						fprintf(stderr,"[%d]O pacote #%d deu timeout! Por isso será reenviado!\n",(int)time(NULL),Confs[m].idMes);
+						fprintf(stderr,"[%d]O pacote #%d deu timeout! Por isso será reenviado!\n",(int)time(NULL),it->idMes);
 						fflush(stdout);					
 						it->time = time(NULL);
+
+						
+
+						StrToUDPMessage (it->arrayMes, &mes);
+						PortsFromFile(&destPORT, mes.idDest, &destIP);
+						si_other.sin_port = htons(destPORT);
+
+											         	
+						//send the message
+						printf("Nodo %d Reencaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", nuser,mes.idMes,destROUTER, mes.idDest);
+						if (sendto(s, it->arrayMes, strlen(it->arrayMes) , 0 , (struct sockaddr *) &si_other, slen)==-1){
+							die("sendto()");
+						}
+
+
+
+
 					}
 				}
 				sleep(2.5);
