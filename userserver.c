@@ -49,7 +49,7 @@ void rmThisId(int id){
 	struct messConfs *it = Confs;
 	while(it!=NULL&&it->idMes!=id)
 		it=it->next;
-	if(it->idMes==id)
+	if(it!=NULL&&it->idMes==id)  ///Fix 1/3
 		rmThisConfs(it);
 }
 
@@ -90,8 +90,10 @@ void printAllConfs(){
 	else{
 		struct messConfs *it = NULL;
 		printf("\n\n\n-------------------------------\n");
+		printf("Start from: %ld\n", (long)Confs);
+		printf("-------------------------------\n");
 		while((it=getConfsN(it))!=NULL){
-			printf("Id: %d\nTime: %d\nMessage:\"%s\"\n", it->idMes, (int)it->time, it->arrayMes);
+			printf("Id: %d  Pos: %ld\nTime: %d\nMessage:\"%s\"\nFrom: %ld\nTo:%ld\n\n\n\n", it->idMes,(long)it, (int)it->time, it->arrayMes, (long)it->prev, (long)it->next);
 			fflush(stdout);
 		}
 		printf("\n-------------------------------\n\n\n");
@@ -113,17 +115,21 @@ void die(char *s){
 }
  
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
-struct sockaddr_in si_other, si_me;
-int nuser, s;
 
+int nuser, s;
+struct sockaddr_in si_me;/*Fix 2/3 Único socket a ser compartilhado pelas threads*/
 int main2(int id){
 	struct AdjList *graph[NROUTERS];
+	struct sockaddr_in si_other;
 	int i;
 	for(i=0; i<NROUTERS; i++)
 		graph[i] = NULL;
 		
 	startGraphFromFile(graph);
 	int destPORT,destROUTER;
+
+	PORT = -1;
+	PortsFromFile(&PORT, nuser, &SERVER);/*Fix 3/3*/
 
 	
 	int slen=sizeof(si_other), recv_len;
@@ -154,14 +160,16 @@ int main2(int id){
 		si_other.sin_port = htons(destPORT);
 
 		if(id==1){
-			memset(buf,'\0', BUFLEN);
-			//try to receive some data, this is a blocking call
-			if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1){
-				die("recvfrom()");
+			while(1){
+				memset(buf,'\0', BUFLEN);
+				//try to receive some data, this is a blocking call
+				if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1){
+					die("recvfrom()");
+				}
+				StrToUDPMessage (buf, &mes);
+				printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
+				rmThisId(mes.idMes);
 			}
-			StrToUDPMessage (buf, &mes);
-			printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
-			rmThisId(mes.idMes);
 		}
 		else if(id==2){
 			mes.idMes =  LastID++;
@@ -210,7 +218,6 @@ int main2(int id){
 					}
 				}
 				sleep(2.5);
-				printAllConfs();
 			}
 		}		
 	}
