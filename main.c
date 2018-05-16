@@ -1,21 +1,47 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#define NROUTERS 7
-
 
 void main(){
-	char x[5], routers[5];
-	sprintf(routers,"%d", NROUTERS+2);
-	int i, userId = 1, serverId = 9;
+	char x[5], NIDSString[5], serverIdString[5];
+	int i, userId, serverId, NIDS;
 	pid_t pid;
-	char *argv[] = {"X","X",routers, NULL};
-	for(i=1; i<=NROUTERS+2; i++){
+
+
+	FILE *fp = fopen("roteador.config", "r");
+	NIDS=0;
+	if(fp==NULL){
+		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
+		return;
+	}
+	while(fscanf(fp,"%d %d %s ", &i, &i, x)!=EOF)
+		NIDS++;
+	fclose(fp);
+	if(NIDS<3){
+		printf("O arquivo \"roteador.config\" possui muitos poucos IDs\n");		
+		return;
+	}
+	sprintf(NIDSString,"%d", NIDS);
+	
+	printf("Escolha o id do usuário (# de 1 a %d): ", NIDS);
+	fflush(stdout);
+	do
+		scanf("%d", &userId);
+	while(userId<1||userId>NIDS);
+	printf("Escolha o id do servidor (# de 1 a %d, exceto %d): ", NIDS, userId);
+	fflush(stdout);
+	do
+		scanf("%d", &serverId);
+	while(serverId==userId||serverId<1||serverId>NIDS);
+	sprintf(serverIdString,"%d", serverId);
+
+	char *argv[] = {"X","X",NIDSString,serverIdString, NULL};
+	for(i=1; i<=NIDS; i++){
 		if((pid = fork())==0){
 			sprintf(x,"%d", i);
 			argv[1]=x;
 			if(i==userId){
-				printf("Please:  Open a new terminal window in this folder and execute the following command:\n./userserver %s %s\n", argv[1], argv[2]); return;
+				printf("Please:  Open a new terminal window in this folder and execute the following command:\n./userserver %s %s %s\n", argv[1], argv[2], argv[3]); return;
 				//execvp("./userserver", argv);
 			}
 			else if(i==serverId)
@@ -26,7 +52,7 @@ void main(){
 			return;
 		}
 	}
-	int n = NROUTERS+2, idP;
+	int n = NIDS, idP;
 	while(n){
 		idP=wait(NULL);
 		n--;
