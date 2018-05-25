@@ -77,8 +77,8 @@ void PortsFromFile( int *PORT, int id, char **ip){
 	fclose(fp);
 }
 
-void configureAndBindMeStructures(char *id, char *nids){
-	NIDS = atoi(nids)+1;
+void configureAndBindMeStructures(char *id){
+	//NIDS = atoi(nids)+1;
 	meID = atoi(id);
 	mePORT = -1;	
 	PortsFromFile(&mePORT, meID, &meIP);	
@@ -100,22 +100,6 @@ void configureAndBindMeStructures(char *id, char *nids){
 	}
 }
 
-void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFinalID, int *destPORT, char *destIP,struct sockaddr_in *si_dest){
-	*destNextID = dijkstra(graph, meID, destFinalID);
-	if(*destNextID==-1)
-		exit(1);
-	else if(!*destNextID)
-		*destNextID=meID;
-	*destPORT = -1;		
-	PortsFromFile(destPORT, *destNextID, &destIP);
-	si_dest->sin_port = htons(*destPORT);
-	if (inet_aton(destIP , &si_dest->sin_addr) == 0){	
-		fprintf(stderr, "inet_aton() failed\n");
-		exit(1);
-	}
-
-}
-
 void printGraph(struct AdjList *graph[]){
 	if(graph==NULL)
 		printf("Grafo vazio\n");
@@ -134,6 +118,22 @@ void printGraph(struct AdjList *graph[]){
 		}	
 	}
 		
+}
+
+void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFinalID, int *destPORT, char *destIP,struct sockaddr_in *si_dest){
+	*destNextID = dijkstra(graph, meID, destFinalID);
+	if(*destNextID==-1)
+		exit(1);
+	else if(!*destNextID)
+		*destNextID=meID;
+	*destPORT = -1;		
+	PortsFromFile(destPORT, *destNextID, &destIP);
+	si_dest->sin_port = htons(*destPORT);
+	if (inet_aton(destIP , &si_dest->sin_addr) == 0){	
+		fprintf(stderr, "inet_aton() failed\n");
+		exit(1);
+	}
+
 }
 
 void addToAdjList(struct AdjList **graph, int dest, int cost){
@@ -233,7 +233,7 @@ Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais re
 		return 0;	
 	int i,selSize=0, *selCosts[NIDS], *selDests[NIDS], *selCompVect[NIDS], originalS = s;
 	
-	for(i=0; i<NIDS; i++){
+	for(i=0; i<NIDS+1; i++){
 		selCosts[i] = malloc(sizeof(int));
 		selDests[i] = malloc(sizeof(int));
 		selCompVect[i] = malloc(sizeof(int));
@@ -242,8 +242,8 @@ Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais re
 	}	
 
 	struct AdjNode *node;
-	int visited[NIDS],dist[NIDS], from[NIDS];
-	for(i=0; i<NIDS; i++){
+	int visited[NIDS+1],dist[NIDS+1], from[NIDS+1];
+	for(i=0; i<NIDS+1; i++){
 		visited[i]=0;
 		dist[i]=INF;
 		from[i]=-1;
@@ -264,7 +264,7 @@ Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais re
 		}
 		while(node->next!=NULL, node = node->next);
 		if(!selSize){
-			printf("Erro: destino do roteador %d não foi encontrado!\n", s);
+			printf("Erro: Não existe caminho do roteador %d para o roteador %d! Último roteador visitado: %d\n", originalS, d, s);
 			return -1;
 		}
 		s = *selDests[0];

@@ -3,7 +3,7 @@
 
 
 void main(){
-	char x[5], NIDSString[5], serverIdString[5];
+	char x[5], NIDSString[5], serverIdString[5], temp[30];
 	int i, userId, serverId, NIDS;
 	pid_t pid;
 
@@ -40,16 +40,21 @@ void main(){
 		if((pid = fork())==0){
 			sprintf(x,"%d", i);
 			argv[1]=x;
-			if(i==userId){
+			/*if(i==userId){
 				printf("Please:  Open a new terminal window in this folder and execute the following command:\n./userserver %s %s %s\n", argv[1], argv[2], argv[3]); return;
 				//execvp("./userserver", argv);
-			}
+			}argv
 			else if(i==serverId)
 				execvp("./server", argv);
-			else
-				execvp("./router",argv);
-			printf("Err");
-			return;
+			else*/
+				//execvp("./router",argv);
+				sprintf(temp,"gnome-terminal 'sh -c \"echo 'saaaa ';\"'");// ./router %s %s %s;\"'", argv[1], argv[2], argv[3]);
+				//sprintf(temp,"gnome-terminal -e 'sh -c \"echo \"saaaa \"; ./router %s %s %s; exec bash\"'", argv[1], argv[2], argv[3]);
+				system(temp);
+				printf("[%s]\n", temp);
+			//printf("Err");
+			//return;
+			//while(1);
 		}
 	}
 	int n = NIDS, idP;
