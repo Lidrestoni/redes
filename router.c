@@ -11,6 +11,10 @@
 #include <sys/time.h>
 #include <time.h>
 #include "udp.h"
+#define vtMAX 1123
+
+int vetdist[vtMAX][vtMAX], vetdistN=0;
+int ***vd = (int***)vetdist;
 
 int destFinalID;
 
@@ -110,7 +114,7 @@ char **argv;
 
 
 int main2(int id){
-	struct AdjList *graph[NIDS];
+	//struct AdjList *graph[NIDS];
 	struct sockaddr_in si_dest;
 	int destPORT,destNextID;
 	int slen=sizeof(si_dest), recv_len;
@@ -118,10 +122,10 @@ int main2(int id){
 	static size_t messageSize = 100;
 
 	int i;
-	for(i=0; i<NIDS; i++)
+	/*for(i=0; i<NIDS; i++)
 		graph[i] = NULL;
 		
-	startGraphFromFile(graph);
+	startGraphFromFile(graph);*/
  
     memset((char *) &si_dest, 0, sizeof(si_dest));
     si_dest.sin_family = AF_INET;
@@ -130,7 +134,7 @@ int main2(int id){
 	struct UDPMessage mes;
 	char *message,*destIP;
 	int LastMessID=0;
-	
+	startVetDistFromFile(1, *vd);
 	if(id==1)
 		while(1){
 			memset(buf,'\0', BUFLEN);
@@ -153,7 +157,7 @@ int main2(int id){
 			}
 			while(destFinalID==meID||destFinalID<1||destFinalID>NIDS);
 			getchar();
-			resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
+			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
 			mes.idMes =  LastMessID++;
 			mes.idOrig = meID;
 			mes.idDest = destFinalID;
@@ -174,7 +178,7 @@ int main2(int id){
 	else{return 0;
 		int l,m;
 		while(1){
-			resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
+			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
 			struct messConfs *it = NULL;
 			while((it=getConfsN(it))!=NULL){
 				if(((int)time(NULL))>((int)it->time)+((int)TIMEOUT)){
@@ -205,7 +209,7 @@ void *mythread(void *data);
 int main(int argc2, char **argv2){
 	int i;
 	char x[10];
-	FILE *fp = fopen("roteador.config", "r");
+	/*FILE *fp = fopen("roteador.config", "r");
 	NIDS=0;
 	if(fp==NULL){
 		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
@@ -217,7 +221,7 @@ int main(int argc2, char **argv2){
 	if(NIDS<3){
 		printf("O arquivo \"roteador.config\" possui muitos poucos IDs\n");		
 		return;
-	}
+	}*/
 
 	argc = argc2;
 	argv = argv2;

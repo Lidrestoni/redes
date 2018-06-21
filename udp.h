@@ -10,14 +10,14 @@ char *meIP;
 int meID,mePORT, Socket; 
 struct sockaddr_in si_me;
 
-struct AdjNode{
+/*struct AdjNode{
 	int dest, cost;
 	struct AdjNode *next;
 };
 
 struct AdjList{
 	struct AdjNode *node;
-};
+};*/
 
 void die(char *s){
 	perror(s);
@@ -100,7 +100,7 @@ void configureAndBindMeStructures(char *id){
 	}
 }
 
-void printGraph(struct AdjList *graph[]){
+/*void printGraph(struct AdjList *graph[]){
 	if(graph==NULL)
 		printf("Grafo vazio\n");
 	else{
@@ -118,9 +118,9 @@ void printGraph(struct AdjList *graph[]){
 		}	
 	}
 		
-}
+}*/
 
-void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFinalID, int *destPORT, char *destIP,struct sockaddr_in *si_dest){
+/*void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFinalID, int *destPORT, char *destIP,struct sockaddr_in *si_dest){
 	*destNextID = dijkstra(graph, meID, destFinalID);
 	if(*destNextID==-1)
 		exit(1);
@@ -134,9 +134,9 @@ void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFin
 		exit(1);
 	}
 
-}
+}*/
 
-void addToAdjList(struct AdjList **graph, int dest, int cost){
+/*void addToAdjList(struct AdjList **graph, int dest, int cost){
 	if(*graph==NULL){
 		*graph = malloc(sizeof(struct AdjList));
 		(*graph)->node = malloc(sizeof(struct AdjNode));
@@ -153,9 +153,9 @@ void addToAdjList(struct AdjList **graph, int dest, int cost){
 		node->next->cost = cost;
 		node->next->next = NULL;
 	}
-}
+}*/
 
-void addElementTo(int pos,int size, int *Costs[], int *Dests[],int *CompVect[], int elemC, int elemD){
+/*void addElementTo(int pos,int size, int *Costs[], int *Dests[],int *CompVect[], int elemC, int elemD){
 	int i;
 	for(i=size; i>pos; i--){
 		*Dests[i]=*Dests[i-1];
@@ -176,13 +176,13 @@ void removeElementIn(int pos,int size, int *Costs[], int *Dests[],int *CompVect[
 		*CompVect[*Dests[i+1]]=i+1;
 	}
 	
-}
+}*/
 
-int addOrderedCosts(int begin, int end, int *Costs[], int *Dests[], int *CompVect[], int elemC, int elemD){
-/*Esse algoritmo utiliza busca binária para adicionar um elemento à uma lista ordenada em ordem crescente
+/*int addOrderedCosts(int begin, int end, int *Costs[], int *Dests[], int *CompVect[], int elemC, int elemD){
+Esse algoritmo utiliza busca binária para adicionar um elemento à uma lista ordenada em ordem crescente
  Foi criada uma variável nend para preservar o tamanho de end (já que precisamos saber a quantidade de índices utilizados para
 roda o algoritmo addElementTo)
-*/
+
 	int mid, nend=end, ret = 1;
 	if(*CompVect[elemD]>=0){
 		ret = 0;
@@ -207,7 +207,7 @@ roda o algoritmo addElementTo)
 					mid++;
 				begin = mid;
 			}
-			/*Aqui em cima temos o problema da divisão de ímpares. Usamos esse mid++ para previnir um loop infinito*/
+			Aqui em cima temos o problema da divisão de ímpares. Usamos esse mid++ para previnir um loop infinito
 		if(elemC<*Costs[nend])
 			mid = nend;
 		else
@@ -216,18 +216,18 @@ roda o algoritmo addElementTo)
 	addElementTo(mid,end+1, Costs, Dests, CompVect, elemC, elemD);
 	return ret;
 
-}
+}*/
 
-void addToGraph(struct AdjList **graph, int dest1, int dest2, int cost){
+/*void addToGraph(struct AdjList **graph, int dest1, int dest2, int cost){
 	addToAdjList(&graph[dest1], dest2, cost);
 	addToAdjList(&graph[dest2], dest1, cost);
-}
+}*/
 
-int dijkstra(struct AdjList *graph[], int s, int d){
-	/*Nesse algoritmo selCosts and selDests representam todos os vizinhos que podemos visitar pelos caminhos até então percorridos, e selSize é a quantidade desses vizinhos. selCompVector é uma forma rápida de identificar qual o índice de certo nodo em selDests e SelCosts (-1 significa que está ausente) 
+/*int dijkstra(struct AdjList *graph[], int s, int d){
+	Nesse algoritmo selCosts and selDests representam todos os vizinhos que podemos visitar pelos caminhos até então percorridos, e selSize é a quantidade desses vizinhos. selCompVector é uma forma rápida de identificar qual o índice de certo nodo em selDests e SelCosts (-1 significa que está ausente) 
 Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais retorna 0, demais casos retorna o próximo s que irá para o caminho mais curto.
 
-*/
+
 	
 	if (s==d)
 		return 0;	
@@ -281,9 +281,21 @@ Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais re
 	return getX;
 	
 	
+}*/
+void startVetDistFromFile(int n, int **vt){
+	int t[3];	
+	FILE *fp = fopen("enlaces2.config", "r");
+	if(fp==NULL){
+		printf("Não foi possível abrir o arquivo \"enlaces2.config\"\n");
+		exit(1);
+	}
+	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF)
+		if(t[0]==meID||t[1]==meID){
+			printf("My node %d %d %d\n", t[0], t[1], t[2]);
+		}vt[2][2]=3;
 }
 
-void startGraphFromFile(struct AdjList *graph[]){
+/*void startGraphFromFile(struct AdjList *graph[]){
 	int t[3];
 	FILE *fp = fopen("enlaces2.config", "r");
 	if(fp==NULL){
@@ -293,4 +305,4 @@ void startGraphFromFile(struct AdjList *graph[]){
 	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF)
 		addToGraph(graph, t[0],t[1],t[2]);
 	fclose(fp);
-}
+}*/
