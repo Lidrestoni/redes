@@ -120,6 +120,16 @@ void configureAndBindMeStructures(char *id){
 		
 }*/
 
+void getDestIPandPort(int destID,int *destPORT, char *destIP,struct sockaddr_in *si_dest){
+	*destPORT = -1;		
+	PortsFromFile(destPORT, destID, &destIP);printf("\n{Port:%d IP: %s}", *destPORT, destIP);
+	si_dest->sin_port = htons(*destPORT);
+	if (inet_aton(destIP , &si_dest->sin_addr) == 0){	
+		fprintf(stderr, "inet_aton() failed\n");
+		exit(1);
+	}
+}
+
 /*void resetupDestStructures(int *destNextID, struct AdjList *graph[], int destFinalID, int *destPORT, char *destIP,struct sockaddr_in *si_dest){
 	*destNextID = dijkstra(graph, meID, destFinalID);
 	if(*destNextID==-1)
@@ -282,18 +292,6 @@ Retorno: Em caso de erro retorna -1, em caso do destino e origem serem iguais re
 	
 	
 }*/
-void startVetDistFromFile(int n, int **vt){
-	int t[3];	
-	FILE *fp = fopen("enlaces2.config", "r");
-	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"enlaces2.config\"\n");
-		exit(1);
-	}
-	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF)
-		if(t[0]==meID||t[1]==meID){
-			printf("My node %d %d %d\n", t[0], t[1], t[2]);
-		}vt[2][2]=3;
-}
 
 /*void startGraphFromFile(struct AdjList *graph[]){
 	int t[3];
