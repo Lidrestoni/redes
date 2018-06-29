@@ -60,24 +60,20 @@ void printVetDist(){
 	O valor de A pode se tornar desatualizado, pois a função pode ter mexido na estrutura do vetor distâcia.
 */
 
-int getVetLabelSquareMatrix(int l){printf("ColumnDist: %d{{\n", vetColumndistN);printVetDist();printf("}}\n");
-	int i, j;
+int getVetLabelSquareMatrix(int l){
+	int i, j,k;
 	vetColumnLabels[vetColumndistN+1]=vetLineLabels[vetLinedistN+1]=0;
 	for(i=0; i<vetColumndistN; i++){
 		if(l==vetColumnLabels[i])
-			return i;
-		if((!i||l>vetColumnLabels[i-1])&&l<vetColumnLabels[i]){printf("Starting loop:\n");
-			/*for(j=0; j<vetColumndistN; j++){printf("!{%d->%d}!",j, vetColumndistN);
-				vetdist[j][vetColumndistN]= vetdist[vetColumndistN][j]=-1;
-			}*/
-
-			for(j=vetColumndistN; j>i; j--){printf("{j:%d}", j);
+			return i; 
+		if((!i||l>vetColumnLabels[i-1])&&l<vetColumnLabels[i]){
+			for(j=vetColumndistN; j>i; j--){
 				vetLineLabels[j]=vetColumnLabels[j]=vetColumnLabels[j-1];
-				for(i=0; i<vetColumndistN; i++)
-					vetdist[i][j]=vetdist[i][j-1];				
+				for(k=0; k<vetColumndistN; k++)
+					vetdist[k][j]=vetdist[k][j-1];				
 				
 			}
-			vetColumnLabels[j]=vetLineLabels[j]=l;printf("[i %d = %d]\n", j, l);
+			vetColumnLabels[j]=vetLineLabels[j]=l;
 			vetColumndistN++;
 			vetLinedistN++;
 			return j;
@@ -91,12 +87,8 @@ int getVetLabelSquareMatrix(int l){printf("ColumnDist: %d{{\n", vetColumndistN);
 	return vetColumndistN-1;
 }
 
-int getVetLineLabel(int l){ //Na prática não é necessário uma função que só crie uma linha. Essa função só foi mantida para manter uma nomeação de funções mais consistente.
-	printf("Just line:\n");	
-	return getVetLabelSquareMatrix(l);
-}
 
-int getVetColumnLabel(int l){
+/*int getVetColumnLabel(int l){
 	int i, j,k;
 	vetColumnLabels[vetColumndistN+1]=0;
 	for(i=0; i<vetColumndistN; i++){
@@ -120,6 +112,53 @@ int getVetColumnLabel(int l){
 	for(i=0; i<vetLinedistN; i++)
 		vetdist[i][vetColumndistN-1]=-1;
 	return vetColumndistN-1;
+}*/
+
+int getVetLabel(int *vetLabels, int *vetDistN, int value, int columnQ){
+	int i, j,k;
+	vetLabels[*vetDistN+1]=0;
+	for(i=0; i<*vetDistN; i++){
+		if(value==vetLabels[i])
+			return i;
+		if((!i||value>vetLabels[i-1])&&value<vetLabels[i]){
+			for(j=*vetDistN; j>i; j--){ 
+				vetLabels[j]=vetLabels[j-1];
+				for(k=0; k<(*vetDistN); k++)
+					if(columnQ)
+						vetdist[k][j]=vetdist[k][j-1];
+					else
+						vetdist[j][k]=vetdist[j-1][k];				
+				
+			}
+			vetLabels[j]=value;
+			for(k=0; k<(*vetDistN); k++)
+				if(columnQ)
+					vetdist[k][j]=-1;
+				else
+					vetdist[j][k]=-1;
+			(*vetDistN)++;
+			return j;
+		}
+	}
+	vetLabels[(*vetDistN)]=value;
+	(*vetDistN)++;
+	for(i=0; i<(*vetDistN); i++)
+		if(columnQ)
+			vetdist[i][(*vetDistN)-1]=-1;
+		else
+			vetdist[(*vetDistN)-1][i]=-1;
+	return (*vetDistN)-1;
+}
+
+int getSameVetLabels(int value){
+	int x,y;
+	x=getVetLabel(vetLineLabels, &vetLinedistN, value, 0);
+	y=getVetLabel(vetColumnLabels, &vetColumndistN, value, 1);
+	return (x==y)? x:-1;
+}
+
+int getVetLineLabel(int value){ //Na prática não é necessário uma função que só crie uma linha. Essa função só foi mantida para manter uma nomeação de funções mais consistente.	
+	return getSameVetLabels(value);
 }
 
 void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor distância na linha correspondente.
@@ -146,7 +185,7 @@ void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor
 				x[xx]='\0';
 				i++;
 				if(!k)
-					dst = getVetColumnLabel(atoi(x));
+					dst = getVetLabel(vetColumnLabels, &vetColumndistN, atoi(x), 1);//getVetColumnLabel(atoi(x));
 				else
 					vetdist[getVetLineLabel(srcID)][dst]=atoi(x);
 			}
@@ -193,12 +232,11 @@ char* createMessage001(){ //Mensagem utilizada para atualizar o vetor distância
 
 
 void addEdgeToVD(int from, int to, int value){
-	printf("Add Edge [\n");	
-	getVetLabelSquareMatrix(from);
-	to = getVetLabelSquareMatrix(to);
-	from = getVetLabelSquareMatrix(from); 
+	getSameVetLabels(from);//getVetLabelSquareMatrix(from);
+	to = getSameVetLabels(to);//getVetLabelSquareMatrix(to);
+	from = getSameVetLabels(from);//getVetLabelSquareMatrix(from); 
 	vetdist[from][to]=vetdist[to][from]=value;
-	printVetDist();printf("]\n");
+	printVetDist();
 }
 
 void startVetDistFromFile(){
