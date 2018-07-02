@@ -29,12 +29,10 @@ Atualização:
 
 int vetdist[vtMAX][vtMAX], vetColumndistN=0, vetLinedistN=0, vetColumnLabels[vtMAX], vetLineLabels[vtMAX];
 
-
-
 void printVetDist(){
 	int i,j;
 	printf("\n");
-	printf("%4s  ", "-");
+	printf("%4d  ", meID);
 	for(i=0; i<vetColumndistN; i++)
 		printf("%4d ", vetColumnLabels[i]);
 	printf("\n");
@@ -60,89 +58,35 @@ void printVetDist(){
 	O valor de A pode se tornar desatualizado, pois a função pode ter mexido na estrutura do vetor distâcia.
 */
 
-int getVetLabelSquareMatrix(int l){
-	int i, j,k;
-	vetColumnLabels[vetColumndistN+1]=vetLineLabels[vetLinedistN+1]=0;
-	for(i=0; i<vetColumndistN; i++){
-		if(l==vetColumnLabels[i])
-			return i; 
-		if((!i||l>vetColumnLabels[i-1])&&l<vetColumnLabels[i]){
-			for(j=vetColumndistN; j>i; j--){
-				vetLineLabels[j]=vetColumnLabels[j]=vetColumnLabels[j-1];
-				for(k=0; k<vetColumndistN; k++)
-					vetdist[k][j]=vetdist[k][j-1];				
-				
-			}
-			vetColumnLabels[j]=vetLineLabels[j]=l;
-			vetColumndistN++;
-			vetLinedistN++;
-			return j;
-		}
-	}
-	vetColumnLabels[vetColumndistN]=vetLineLabels[vetLinedistN]=l;
-	for(j=0; j<vetColumndistN; j++)
-				vetdist[j][vetColumndistN]=vetdist[vetColumndistN][j]=-1;
-	vetColumndistN++;
-	vetLinedistN++;
-	return vetColumndistN-1;
-}
 
-
-/*int getVetColumnLabel(int l){
-	int i, j,k;
-	vetColumnLabels[vetColumndistN+1]=0;
-	for(i=0; i<vetColumndistN; i++){
-		if(l==vetColumnLabels[i])
-			return i;
-		if((!i||l>vetColumnLabels[i-1])&&l<vetColumnLabels[i]){//printf("Verdade{(!%d||%d>%d)&&%d<%d[ColumnDist: %d]}", i, l,vetColumnLabels[i-1],l,vetColumnLabels[i], vetColumndistN );
-			for(j=vetColumndistN; j>i; j--){ //printf("({j=%d,i=%d}%d ->%d)", j,i,vetColumnLabels[j-1], vetColumnLabels[j]);
-				vetColumnLabels[j]=vetColumnLabels[j-1];
-				for(k=0; k<vetLinedistN; k++)
-					vetdist[k][j]=vetdist[k][j-1];				
-				
-			}
-			vetColumnLabels[j]=l;
-			for(k=0; k<vetLinedistN; k++)
-					vetdist[k][j]=-1;
-			vetColumndistN++;
-			return j;
-		}
-	}//printf("\n");
-	vetColumnLabels[vetColumndistN++]=l;
-	for(i=0; i<vetLinedistN; i++)
-		vetdist[i][vetColumndistN-1]=-1;
-	return vetColumndistN-1;
-}*/
-
-int getVetLabel(int *vetLabels, int *vetDistN, int value, int columnQ){
-	int i, j,k;
-	vetLabels[*vetDistN+1]=0;
-	for(i=0; i<*vetDistN; i++){
+int getVetLabel(int *vetLabels, int *vetDistN,int *vetDistN2, int value, int columnQ){
+	int i,j,k;	
+	for(i=0; i<*vetDistN;i++){
 		if(value==vetLabels[i])
 			return i;
 		if((!i||value>vetLabels[i-1])&&value<vetLabels[i]){
 			for(j=*vetDistN; j>i; j--){ 
 				vetLabels[j]=vetLabels[j-1];
-				for(k=0; k<(*vetDistN); k++)
+				for(k=0; k<(*vetDistN2); k++)
 					if(columnQ)
 						vetdist[k][j]=vetdist[k][j-1];
 					else
 						vetdist[j][k]=vetdist[j-1][k];				
 				
 			}
-			vetLabels[j]=value;
-			for(k=0; k<(*vetDistN); k++)
+			vetLabels[i]=value;
+			for(k=0; k<(*vetDistN2); k++)
 				if(columnQ)
-					vetdist[k][j]=-1;
+					vetdist[k][i]=-1;
 				else
-					vetdist[j][k]=-1;
+					vetdist[i][k]=-1;
 			(*vetDistN)++;
-			return j;
+			return i;
 		}
 	}
 	vetLabels[(*vetDistN)]=value;
 	(*vetDistN)++;
-	for(i=0; i<(*vetDistN); i++)
+	for(i=0; i<(*vetDistN2); i++)
 		if(columnQ)
 			vetdist[i][(*vetDistN)-1]=-1;
 		else
@@ -152,13 +96,43 @@ int getVetLabel(int *vetLabels, int *vetDistN, int value, int columnQ){
 
 int getSameVetLabels(int value){
 	int x,y;
-	x=getVetLabel(vetLineLabels, &vetLinedistN, value, 0);
-	y=getVetLabel(vetColumnLabels, &vetColumndistN, value, 1);
+	y=getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN, value, 1);
+	x=getVetLabel(vetLineLabels, &vetLinedistN,&vetColumndistN, value, 0);
 	return (x==y)? x:-1;
 }
 
 int getVetLineLabel(int value){ //Na prática não é necessário uma função que só crie uma linha. Essa função só foi mantida para manter uma nomeação de funções mais consistente.	
 	return getSameVetLabels(value);
+}
+
+int validSum(int a, int b){
+	if(a<0||b<0)
+		return -1;
+	return a+b;
+}
+
+int validSmaller(int a, int b){
+	if(a<0&&b<0)
+		return a<b? a:b;
+	if(a<0)
+		return b;
+	if(b<0)
+		return a;
+	return a<b? a:b; 
+}
+
+void atualizaVD(){
+	int i,j, min, meLineID = getVetLabel(vetLineLabels, &vetLinedistN,&vetColumndistN,meID , 1), meColumnID=getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,meID , 1);
+	for(i=0; i<vetColumndistN; i++){
+		if(i==meColumnID)
+			min=0;
+		else{
+			min=vetdist[meLineID][i];			
+			for(j=0; j<vetLinedistN;j++)
+				min=validSmaller(min, validSum(vetdist[meLineID][j],vetdist[j][i]));
+		}
+		vetdist[meLineID][i]=min;	
+	}
 }
 
 void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor distância na linha correspondente.
@@ -185,7 +159,7 @@ void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor
 				x[xx]='\0';
 				i++;
 				if(!k)
-					dst = getVetLabel(vetColumnLabels, &vetColumndistN, atoi(x), 1);//getVetColumnLabel(atoi(x));
+					dst = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN, atoi(x), 1);//getVetColumnLabel(atoi(x));
 				else
 					vetdist[getVetLineLabel(srcID)][dst]=atoi(x);
 			}
@@ -235,22 +209,27 @@ void addEdgeToVD(int from, int to, int value){
 	getSameVetLabels(from);//getVetLabelSquareMatrix(from);
 	to = getSameVetLabels(to);//getVetLabelSquareMatrix(to);
 	from = getSameVetLabels(from);//getVetLabelSquareMatrix(from); 
-	vetdist[from][to]=vetdist[to][from]=value;
+	//vetdist[from][to]=vetdist[to][from]=value;
+	printVetDist();
+	vetdist[from][to]=value;
 	printVetDist();
 }
 
 void startVetDistFromFile(){
 	int t[3];	
-	FILE *fp = fopen("enlaces2.config", "r");
+	FILE *fp = fopen("enlaces3.config", "r");
 	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"enlaces2.config\"\n");
+		printf("Não foi possível abrir o arquivo \"enlaces3.config\"\n");
 		exit(1);
 	}
 	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF){
-		if(t[0]==meID||t[1]==meID)
+		if(t[0]==meID)
 			addEdgeToVD(t[0], t[1], t[2]);
+		else if(t[1]==meID)
+			addEdgeToVD(t[1], t[0], t[2]);
 		
 	}
+	addEdgeToVD(meID, meID,0);
 }
 
 
@@ -351,7 +330,7 @@ char **argv;
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
 
 
-int main2(int id){
+int main2(int id){//printf("main2<%d>", id);
 	//struct AdjList *graph[NIDS];
 	struct sockaddr_in si_dest;
 	int destPORT,destID;
@@ -372,34 +351,35 @@ int main2(int id){
 	struct UDPMessage mes;
 	char *message,*destIP;
 	int LastMessID=0;
-	if(id==1) //Thread responsável por receber mensagens dos vizinhos
+	if(id==0&&id==meID-1){ printf("I'm one!!!");//Thread responsável por receber mensagens dos vizinhos
+		struct sockaddr_in si_other;
+		int recv_len, other_len = sizeof(si_other);
 		while(1){
 			memset(buf,'\0', BUFLEN);
 			//try to receive some data, this is a blocking call
-			if (recvfrom(Socket, buf, BUFLEN, 0, (struct sockaddr *) &si_me, &slen) == -1)
+			if ((recv_len=recvfrom(Socket, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &other_len)) == -1)
 				die("recvfrom()");
-			printf("Recebi \"%s\"\n", buf);
+			//printf("Recebi \"%s\"\n", buf);
+			//printf("Received packet{\"%s\"} from %s-%d:%d\n", buf,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port),si_other.sin_port);
 			readMessage(buf);
 			printVetDist();
-			/*StrToUDPMessage (buf, &mes);
-			if(mes.idDest==meID)
-				printf("\nSucesso! O pacote #%d voltou!\nMensagem do pacote: %s\n", mes.idMes, mes.mess);
-			else
-				printf("XXX");
-			rmThisId(mes.idMes);*/
+			atualizaVD();
+			printVetDist();
 		}
-	else if(id==2)
+	}
+	else if(id==1&&id==meID-1)
 		while(1){
-			printf("Para qual roteador mandar a mensagem? (# de 1 a %d, exceto %d): ", NIDS, meID);
+			printf("Para qual roteador mandar a mensagem? ");
 			do{
 				scanf("%d", &destFinalID);
 			}
-			while(destFinalID==meID||destFinalID<1||destFinalID>NIDS);
+			while(destFinalID==meID||destFinalID<1);
 			getchar();
 			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
 			mes.idMes =  LastMessID++;
 			mes.idOrig = meID;
 			mes.idDest = destFinalID;
+			getDestIPandPort(vetLineLabels[i],&destPORT, destIP,&si_dest);
 			printf("Enter message : ");
 			//fflush(stdout);
 			getline(&message, &messageSize, stdin);
@@ -412,23 +392,25 @@ int main2(int id){
 			addConfs(mes.idMes, message);
 			if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1){
 				die("sendto()");
-			}else printf("[%d]", si_dest.sin_port);
+			}//else printf("[%d]", si_dest.sin_port);
 		}
-	else if(id==3)	/*Thread responsável por dar sinal de vida aos vizinhos*/
+	else if(id==2&&meID-1==id){ printf("I'm three!");	/*Thread responsável por dar sinal de vida aos vizinhos*/
+		char *m;
 		while(1){
 			sleep(2.5);
-			char *m = createMessage001();
-			for(i=0; i<vetLinedistN; i++){
-				if(vetLineLabels[i]==meID)
+			m = createMessage001();
+			for(i=0; i<vetLinedistN; i++){ 
+				if(vetLineLabels[i]==meID)//getVetLabels(meID))
 					continue;
 				getDestIPandPort(vetLineLabels[i],&destPORT, destIP,&si_dest);
-				printf("\n(%d Meid:%d)Mandando \"%s\" para id %d\n", vetLinedistN,meID,m, vetLineLabels[i]);
-				if(sendto(Socket, m, strlen(m) , 0 , (struct sockaddr *) &si_dest, slen)==-1){
+				//printf("\n(%d Meid:%d Meport:%d{%d:%d})Mandando \"%s\" para id %d <%d>\n", vetLinedistN,meID,mePORT,si_me.sin_port,si_me.sin_addr.s_addr,m, vetLineLabels[i],si_dest.sin_port);
+				if(sendto(Socket, m, strlen(m) , 0 , (struct sockaddr *) &si_dest, sizeof(si_dest))==-1){
 							die("sendto()");
-				}
+				}//else printf("[%d %d]Sucesso: Mensagem mandada para %d %d\n",mePORT, htons(mePORT), si_dest.sin_port,si_dest.sin_port);
 			}
 		}
-	else{return 0;
+	}
+	else{ printf("[%d:%d]", meID,id);return 0;
 		int l,m;
 		while(1){
 			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
@@ -450,7 +432,7 @@ int main2(int id){
 			sleep(2.5);
 		}
 	}		
-	close(Socket);
+	//close(Socket);
 	return 0;
 }
 
@@ -459,47 +441,42 @@ void *mythread(void *data);
 #define N 4 // number of threads
 
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
+
 int main(int argc2, char **argv2){
 	int i;
 	char x[10];
-	/*FILE *fp = fopen("roteador.config", "r");
-	NIDS=0;
-	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
-		return;
-	}
-	while(fscanf(fp,"%d %d %s ", &i, &i, x)!=EOF)
-		NIDS++;
-	fclose(fp);
-	if(NIDS<3){
-		printf("O arquivo \"roteador.config\" possui muitos poucos IDs\n");		
-		return;
-	}*/
-
 	
 	argc = argc2;
 	argv = argv2;
 	pthread_t tids[N];
 	int *ii = malloc(sizeof(int));
-		
 
 	if(argc<1){
 		printf("Specify which router is being started!\n");
 		fflush(stdout);
 		exit(1);	
 	}
-
 	
 	configureAndBindMeStructures(argv[1]);
+	printVetDist();
 	startVetDistFromFile();
 	printVetDist();
 	/*printf("\n>%s<\n",createMessage001());
 	readMessage001("001|10|6|1|0|2|20|3|20|4|20|5|10|9|100|");
 	printVetDist();*/
 	
-	for(i=0, *ii=i; i<N; i++, *ii=i) {
-		pthread_create(&tids[i], 0, mythread, ii);
+	/*for(i=0; i<N; i++){
+		pthread_create(&tids[i], 0, mythread, (void*)i);
+	}*/
+
+	int id[10];
+	pthread_t thread_tid[10];
+
+	for(i = 0; i < 10; i++) {
+		id[i] = i;
+		pthread_create(&tids[i], NULL, mythread, (void*)(id + i));
 	}
+
 	/* We will now wait for each thread to<\n>
 	* terminate */
 	for(i=0; i<N; i++) {
@@ -512,7 +489,7 @@ int main(int argc2, char **argv2){
 
 
 void *mythread(void *data) {
-	int pidThread = *((int *)data);
-	main2(pidThread);
+	int *pidThread = (int *)data;//*((int *)data);
+	printf("pidThread<%d>", *pidThread);main2(*pidThread);
 	pthread_exit(NULL);
 }

@@ -5,7 +5,7 @@
 #include <stdlib.h> //exit(0);
 #define INF 11234567
 
-int NIDS;//Total number of routers+users+servers
+//int NIDS;//Total number of routers+users+servers
 char *meIP;
 int meID,mePORT, Socket; 
 struct sockaddr_in si_me;
@@ -81,7 +81,7 @@ void configureAndBindMeStructures(char *id){
 	//NIDS = atoi(nids)+1;
 	meID = atoi(id);
 	mePORT = -1;	
-	PortsFromFile(&mePORT, meID, &meIP);	
+	PortsFromFile(&mePORT, meID, &meIP);	//printf("<<%d>>", mePORT);
 
 	if ( (Socket=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{
@@ -90,10 +90,11 @@ void configureAndBindMeStructures(char *id){
 
 	// zero out the structure
 	memset((char *) &si_me, 0, sizeof(si_me));
-	si_me.sin_family = AF_INET;
-	si_me.sin_port = htons(mePORT);
-	si_me.sin_addr.s_addr = htonl(INADDR_ANY);
 
+	si_me.sin_family = AF_INET;
+	si_me.sin_port = htons(mePORT); 
+	//si_me.sin_addr.s_addr = htonl(atoi(meIP));//INADDR_ANY);//printf("{{{{%d:%d(%d)}}}}",si_me.sin_port, mePORT,si_me.sin_addr.s_addr);
+	si_me.sin_addr.s_addr = inet_addr(meIP);
 	//bind socket to port
 	if( bind(Socket , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1){
 		die("bind");
@@ -122,8 +123,9 @@ void configureAndBindMeStructures(char *id){
 
 void getDestIPandPort(int destID,int *destPORT, char *destIP,struct sockaddr_in *si_dest){
 	*destPORT = -1;		
-	PortsFromFile(destPORT, destID, &destIP);printf("\n{Port:%d IP: %s}", *destPORT, destIP);
-	si_dest->sin_port = htons(*destPORT);
+	PortsFromFile(destPORT, destID, &destIP);
+	si_dest->sin_port = htons(*destPORT);//printf("\n{Port:%d-%d IP: %s}", *destPORT,si_dest->sin_port, destIP);
+	//printf("?{%d}-%d", si_dest->sin_port, *destPORT);
 	if (inet_aton(destIP , &si_dest->sin_addr) == 0){	
 		fprintf(stderr, "inet_aton() failed\n");
 		exit(1);

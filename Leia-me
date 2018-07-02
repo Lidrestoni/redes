@@ -1,0 +1,8 @@
+Autor: Guilherme Antunes da Silva
+
+Trabalho 2 de Redes
+
+Para compilar é necessário executar o comando:
+	gcc router.c -o router -lpthread
+	
+E para iniciar cada roteador, usa-se o comando ./router <id do roteador>
