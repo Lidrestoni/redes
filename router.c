@@ -15,11 +15,15 @@
 
 Tipos de Mensangens:
 
+Confirmação:
+
+000 | ID da mensagem | ID do remetente
+
 Atualização:
 001 | ID do remetente |Número de colunas X | Cabeçalho 1 | Conteúdo 1 |Cabeçalho 2| Conteúdo 2  ... Cabeçalho X | Conteúdo X | 
 
-UDP:
-000 | 
+Mensagem encaminhada por UDP:
+010 | ID da mensagem ; ID do remetente ; ID do destino ; mensagem
 
 */
 
@@ -255,6 +259,25 @@ struct UDPMessage{
 	int idMes,idOrig,idDest;
 	char mess[101];
 };
+//000 | ID da mensagem | ID do remetente
+void readMessage000(char *vet,struct UDPMessage *m){
+	if(vet[0]=='0'&&vet[1]=='0'&&vet[2]=='0'){
+		int i=4, x[2], v=2;
+		char *p;
+		while(v--){
+			p = &vet[i];
+			while(vet[i]!='|')
+				i++;
+			vet[i]='\0';
+			x[v] = atoi(p);
+			vet[i]='|';
+			i++;
+		}
+		m->idMes=x[1]; m->idDest = x[0];m->idOrig=-1;
+	}
+	else
+		printf("Warning: Erro de tratamento de mensagem! Uma mensagem do tipo %c%c%c está solicitando tratamento do tipo 000\n", vet[0], vet[1], vet[2]);
+}
 
 void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor distância na linha correspondente.
 	if(vet[0]=='0'&&vet[1]=='0'&&vet[2]=='1'){
@@ -317,6 +340,16 @@ void readMessage010(char *a, struct UDPMessage *m){ //Mensagem utilizada para en
 		printf("Warning: Erro de tratamento de mensagem! Uma mensagem do tipo %c%c%c está solicitando tratamento do tipo 010\n", a[0], a[1], a[2]);
 }
 
+
+char* createMessage000(struct UDPMessage m){//Mensagem de confirmação de recebimento de mensagem
+	int i;	
+	char mystr[50], *x = malloc(sizeof(char)*50);
+	snprintf(mystr, 50, "000|%d|%d|", m.idMes,m.idOrig);
+	for(i=0; i<strlen(mystr);i++)
+		x[i]=mystr[i];
+	x[i]='\0';
+	return x;
+}
 
 char* createMessage001(){ //Mensagem utilizada para atualizar o vetor distância dos vizinhos.
 	int i, meLine = getVetLineLabel(meID), j, k, kk;
@@ -515,12 +548,32 @@ int main2(int id){
 				die("recvfrom()");
 			//printf("Recebi \"%s\"\n", buf);
 			//printf("Received packet{\"%s\"} from %s-%d:%d\n", buf,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port),si_other.sin_port);
-			if(buf[0]=='0'&&buf[1]=='0'&&buf[2]=='1')
+			if(buf[0]=='0'&&buf[1]=='0'&&buf[2]=='0'){
+				readMessage000(buf, &mes);
+				if(mes.idDest==meID){
+					printf("\nRecebi a confirmação da mensagem %d!\n", mes.idMes);
+					return 0;
+				}
+				else{
+					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idDest, 1);
+					getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
+					printf("Nodo %d recebeu a confirmação da mensagem #%d. Enviando para o nodo %d com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idDest);
+					if (sendto(Socket, buf, strlen(buf) , 0 , (struct sockaddr *) &si_dest, slen)==-1)
+							die("sendto()");
+				}
+			}
+			else if(buf[0]=='0'&&buf[1]=='0'&&buf[2]=='1')
 				readMessage001(buf);
 			else if(buf[0]=='0'&&buf[1]=='1'&&buf[2]=='0'){
 				readMessage010(buf, &mes);
 				if(mes.idDest==meID){
-					printf("Recebi minha mensagem!");return 0;				
+					message = createMessage000(mes);
+					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idOrig, 1);
+					getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
+					printf("Nodo %d recebeu a mensagem #%d. Enviando confirmação de recebimento para o nodo %d com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idOrig);
+					fflush(stdout);
+					if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1)
+						die("sendto()");				
 				}
 				else{
 					printNextLine();
