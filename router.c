@@ -259,7 +259,7 @@ struct UDPMessage{
 	int idMes,idOrig,idDest;
 	char mess[101];
 };
-//000 | ID da mensagem | ID do remetente
+
 void readMessage000(char *vet,struct UDPMessage *m){
 	if(vet[0]=='0'&&vet[1]=='0'&&vet[2]=='0'){
 		int i=4, x[2], v=2;
@@ -421,6 +421,7 @@ void startVetDistFromFile(){
 
 
 
+pthread_mutex_t confsMutex;
 
 static time_t TIMEOUT = 1; 
 /*Estrutura utilizada para conferir o timeout*/
@@ -451,16 +452,21 @@ void rmThisConfs(struct messConfs *node){
 }
 
 void rmThisId(int id){
-	if(Confs==NULL)
+	pthread_mutex_lock(&confsMutex);
+	if(Confs==NULL){
+		pthread_mutex_unlock(&confsMutex);
 		return;
+	}
 	struct messConfs *it = Confs;
 	while(it!=NULL&&it->idMes!=id)
 		it=it->next;
 	if(it!=NULL&&it->idMes==id)  ///Fix 1/3
 		rmThisConfs(it);
+	pthread_mutex_unlock(&confsMutex);
 }
 
 void addConfs(int idMes, char *mes){
+	pthread_mutex_lock(&confsMutex);
 	if(Confs==NULL){
 		Confs = malloc(sizeof(struct messConfs));
 		Confs->idMes = idMes;
@@ -481,15 +487,21 @@ void addConfs(int idMes, char *mes){
 		iterator->next->next=NULL;
 		iterator->next->prev = iterator;
 	}
+	pthread_mutex_unlock(&confsMutex);
 }
 
 struct messConfs* getConfsN(struct messConfs *it){
-	if(it==NULL)
+	pthread_mutex_lock(&confsMutex);
+	if(it==NULL){
+		pthread_mutex_unlock(&confsMutex);
 		return Confs;
+	}
+	pthread_mutex_unlock(&confsMutex);
 	return it->next;
 }
 
 void printAllConfs(){
+	pthread_mutex_lock(&confsMutex);
 	if(Confs==NULL){
 		printf("Sem confirmações pendentes\n");
 		fflush(stdout);
@@ -505,6 +517,7 @@ void printAllConfs(){
 		}
 		printf("\n-------------------------------\n\n\n");
 	}
+	pthread_mutex_unlock(&confsMutex);
 }
 
 int argc;
@@ -552,7 +565,7 @@ int main2(int id){
 				readMessage000(buf, &mes);
 				if(mes.idDest==meID){
 					printf("\nRecebi a confirmação da mensagem %d!\n", mes.idMes);
-					return 0;
+					rmThisId(mes.idMes);
 				}
 				else{
 					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idDest, 1);
@@ -640,8 +653,8 @@ int main2(int id){
 			}
 		}
 	}
-	else{ return 0;
-		int l,m;
+	else{
+		int l,m, destIDLabel;
 		while(1){
 			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
 			struct messConfs *it = NULL;
@@ -651,7 +664,9 @@ int main2(int id){
 					fflush(stdout);					
 					it->time = time(NULL);
 					readMessage010(it->arrayMes, &mes);
-																         	
+					
+					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idDest, 1);
+					getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);										         	
 					//send the message
 					printf("Nodo %d Reencaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,destID, mes.idDest);
 					if (sendto(Socket, it->arrayMes, strlen(it->arrayMes) , 0 , (struct sockaddr *) &si_dest, slen)==-1){
@@ -675,6 +690,11 @@ void *mythread(void *data);
 int main(int argc2, char **argv2){
 	int i;
 	char x[10];
+
+	if(pthread_mutex_init(&confsMutex, NULL) !=0){
+		printf("Mutex is not working\n");
+		return 1;
+	}
 	
 	argc = argc2;
 	argv = argv2;
