@@ -23,7 +23,7 @@ Atualização:
 001 | ID do remetente |Número de colunas X | Cabeçalho 1 | Conteúdo 1 |Cabeçalho 2| Conteúdo 2  ... Cabeçalho X | Conteúdo X | 
 
 Mensagem encaminhada por UDP:
-010 | ID da mensagem ; ID do remetente ; ID do destino ; mensagem
+010 | TTL|ID da mensagem ; ID do remetente ; ID do destino ; mensagem
 
 */
 
@@ -40,6 +40,7 @@ Mensagem encaminhada por UDP:
 #define vtMAX 1123
 #define totalMesLength 500
 #define INF 11234567
+#define TTL 10
 
 int vetdist[vtMAX][vtMAX], vetColumndistN=0, vetLinedistN=0, vetColumnLabels[vtMAX], vetLineLabels[vtMAX], nextLine[vtMAX]/*O nextline tem a mesma ordenação do vetColumnLabels*/;
 
@@ -256,7 +257,7 @@ void atualizaVD(){
 }
 
 struct UDPMessage{
-	int idMes,idOrig,idDest;
+	int idMes,idOrig,idDest,ttl;
 	char mess[101];
 };
 
@@ -316,10 +317,18 @@ void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor
 	}
 }
 
-void readMessage010(char *a, struct UDPMessage *m){ //Mensagem utilizada para encaminhar a mensagem ao destino via UDP
-	if(a[0]=='0'&&a[1]=='1'&&a[2]=='0'){	
-		int i=4, x[3], v=3;
+int readMessage010(char *a, struct UDPMessage *m){ //Mensagem utilizada para encaminhar a mensagem ao destino via UDP
+	if(a[0]=='0'&&a[1]=='1'&&a[2]=='0'){
+		int i=4, x[3], v=3, ttl;
 		char *p, temp[103];
+		p=&a[i];
+		while(a[i]!='|')
+			i++;
+		a[i]='\0';
+		ttl=atoi(p);
+		if(ttl<1)
+			return 0;
+		a[i++]='|';
 		while(v--){
 			p = &a[i];
 			while(a[i]!=';')
@@ -329,15 +338,18 @@ void readMessage010(char *a, struct UDPMessage *m){ //Mensagem utilizada para en
 			a[i]=';';
 			i++;
 		}
-		m->idMes=x[2]; m->idOrig = x[1]; m->idDest = x[0];
+		m->idMes=x[2]; m->idOrig = x[1]; m->idDest = x[0]; m->ttl=ttl-1;
 		int j=0;
 		while(a[i]!=';'&&a[i]!='\0')
 			temp[j++]=a[i++];
 		temp[j]='\0';
 		strcpy(m->mess,temp);
+		return 1;
+	
 	}
 	else
 		printf("Warning: Erro de tratamento de mensagem! Uma mensagem do tipo %c%c%c está solicitando tratamento do tipo 010\n", a[0], a[1], a[2]);
+		return 0;
 }
 
 
@@ -382,7 +394,7 @@ char* createMessage001(){ //Mensagem utilizada para atualizar o vetor distância
 
 char* createMessage010(struct UDPMessage m){//Mensagem utilizada para encaminhar a mensagem ao destino via UDP
 	char *apstr = malloc(messageTotalLen);
-	snprintf (apstr, messageTotalLen+1, "010|%d;%d;%d;%s;", m.idMes,m.idOrig, m.idDest, m.mess); 
+	snprintf (apstr, messageTotalLen+1, "010|%d|%d;%d;%d;%s;", m.ttl,m.idMes,m.idOrig, m.idDest, m.mess); 
 	return apstr;
 }
 
@@ -578,7 +590,8 @@ int main2(int id){
 			else if(buf[0]=='0'&&buf[1]=='0'&&buf[2]=='1')
 				readMessage001(buf);
 			else if(buf[0]=='0'&&buf[1]=='1'&&buf[2]=='0'){
-				readMessage010(buf, &mes);
+				if(!readMessage010(buf, &mes))
+					continue;
 				if(mes.idDest==meID){
 					message = createMessage000(mes);
 					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idOrig, 1);
@@ -592,7 +605,7 @@ int main2(int id){
 					printNextLine();
 					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idDest, 1);
 					getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
-					printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idDest);
+					printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d, ttl: %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idDest, mes.ttl);
 					message = createMessage010(mes);
 					if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1)
 						die("sendto()");
@@ -618,6 +631,7 @@ int main2(int id){
 			mes.idMes =  LastMessID++;
 			mes.idOrig = meID;
 			mes.idDest = destID;
+			mes.ttl = TTL;
 			destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,destID , 1);
 			getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
 			printf("Enter message : ");
