@@ -15,16 +15,18 @@
 
 Tipos de Mensangens:
 
-Confirmação:
+Confirmação de recebimento de mensagem:
 
 000 | ID da mensagem | ID do remetente
 
-Atualização:
+Atualização do vetor distância:
 001 | ID do remetente |Número de colunas X | Cabeçalho 1 | Conteúdo 1 |Cabeçalho 2| Conteúdo 2  ... Cabeçalho X | Conteúdo X | 
 
 Mensagem encaminhada por UDP:
 010 | TTL|ID da mensagem ; ID do remetente ; ID do destino ; mensagem
 
+Exclusão de enlace para um vizinho:
+011 | ID do remetente | ID do destino|
 */
 
 #include <pthread.h>
@@ -43,6 +45,8 @@ Mensagem encaminhada por UDP:
 #define TTL 10
 
 int vetdist[vtMAX][vtMAX], vetColumndistN=0, vetLinedistN=0, vetColumnLabels[vtMAX], vetLineLabels[vtMAX], nextLine[vtMAX]/*O nextline tem a mesma ordenação do vetColumnLabels*/;
+time_t vetLineTimes[vtMAX];
+static time_t linkTimeOut = 10;
 
 char *meIP;
 int meID,mePORT, Socket; 
@@ -51,6 +55,13 @@ struct sockaddr_in si_me;
 void die(char *s){
 	perror(s);
 	exit(1);
+}
+
+void printVetTimes(){
+	int i;
+	for(i=0; i<vetLinedistN; i++)
+		printf("[%d : %d]", vetLineLabels[i], (int)vetLineTimes[i]);
+	printf("\n");
 }
 
 
@@ -92,7 +103,6 @@ void configureAndBindMeStructures(char *id){
 
 	si_me.sin_family = AF_INET;
 	si_me.sin_port = htons(mePORT); 
-	//si_me.sin_addr.s_addr = htonl(atoi(meIP));//INADDR_ANY);//printf("{{{{%d:%d(%d)}}}}",si_me.sin_port, mePORT,si_me.sin_addr.s_addr);
 	si_me.sin_addr.s_addr = inet_addr(meIP);
 	//bind socket to port
 	if( bind(Socket , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1){
@@ -103,15 +113,30 @@ void configureAndBindMeStructures(char *id){
 void getDestIPandPort(int destID,int *destPORT, char *destIP,struct sockaddr_in *si_dest){
 	*destPORT = -1;		
 	PortsFromFile(destPORT, destID, &destIP);
-	si_dest->sin_port = htons(*destPORT);//printf("\n{Port:%d-%d IP: %s}", *destPORT,si_dest->sin_port, destIP);
-	//printf("?{%d}-%d", si_dest->sin_port, *destPORT);
+	si_dest->sin_port = htons(*destPORT);
 	if (inet_aton(destIP , &si_dest->sin_addr) == 0){	
 		fprintf(stderr, "inet_aton() failed\n");
 		exit(1);
 	}
 }
 
-
+int getIDbyIPandPORT(char *IP,int PORT){
+ 	int t[2];
+	char *t2 = malloc(sizeof(char)*10);
+	FILE *fp = fopen("roteador.config", "r");
+	if(fp==NULL){
+		printf("Não foi possível abrir o arquivo \"roteador.config\"\n");		
+		exit(1);
+	}
+	do{
+		if(fscanf(fp,"%d %d %s ", &t[0], &t[1], t2)==EOF){
+			fclose(fp);
+			return -1;
+		}
+	}while(PORT!=t[1]||strcmp(t2,IP));
+	fclose(fp);
+	return t[0];
+}
 
 void printNextLine(){
 	int i, j;
@@ -292,7 +317,8 @@ void readMessage001(char *vet){ //Lê o vetor mandado por src e atualiza o vetor
 				n=atoi(x);
 			else{								
 				srcID = atoi(x);
-				getVetLineLabel(srcID);
+				src = getVetLineLabel(srcID);
+				vetLineTimes[src] = time(NULL); 
 			}
 			i++; 
 		}		
@@ -352,6 +378,13 @@ int readMessage010(char *a, struct UDPMessage *m){ //Mensagem utilizada para enc
 		return 0;
 }
 
+void readMessage011(char *mes){
+	if(mes[0]=='0'&&mes[1]=='1'&&mes[2]=='1'){
+	;}
+	else
+		printf("Warning: Erro de tratamento de mensagem! Uma mensagem do tipo %c%c%c está solicitando tratamento do tipo 011\n", mes[0], mes[1], mes[2]);
+}
+
 
 char* createMessage000(struct UDPMessage m){//Mensagem de confirmação de recebimento de mensagem
 	int i;	
@@ -398,23 +431,29 @@ char* createMessage010(struct UDPMessage m){//Mensagem utilizada para encaminhar
 	return apstr;
 }
 
+char* createMessage011(int fromID, int toID){//Mensagem para exclusão de enlace
+	int i;
+	char mystr[50], *x = malloc(sizeof(char)*50);
+	snprintf(mystr, 50, "011|%d|%d|", fromID,toID);
+	for(i=0; i<strlen(mystr);i++)
+		x[i]=mystr[i];
+	x[i]='\0';
+	return x;
+}
 
 
 void addEdgeToVD(int from, int to, int value){
-	getSameVetLabels(from);//getVetLabelSquareMatrix(from);
-	to = getSameVetLabels(to);//getVetLabelSquareMatrix(to);
-	from = getSameVetLabels(from);//getVetLabelSquareMatrix(from); 
-	//vetdist[from][to]=vetdist[to][from]=value;
-	printVetDist();
+	getSameVetLabels(from);
+	to = getSameVetLabels(to);
+	from = getSameVetLabels(from);
 	vetdist[from][to]=value;
-	printVetDist();
 }
 
 void startVetDistFromFile(){
 	int t[3];	
 	FILE *fp = fopen("enlaces4.config", "r");
 	if(fp==NULL){
-		printf("Não foi possível abrir o arquivo \"enlaces3.config\"\n");
+		printf("Não foi possível abrir o arquivo \"enlaces4.config\"\n");
 		exit(1);
 	}
 	while(fscanf(fp,"%d %d %d ", &t[0], &t[1], &t[2])!=EOF){
@@ -428,6 +467,8 @@ void startVetDistFromFile(){
 	int i;
 	for(i=0; i<vetColumndistN; i++)
 		nextLine[i]= -1;
+	for(i=0; i<vetLinedistN; i++)
+		vetLineTimes[i]=time(NULL);
 	nextLine[getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN, meID, 1)]=meID;
 }
 
@@ -542,8 +583,45 @@ char **argv;
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
 
 
+void addLinkToID(int id, int dist){
+	if(!existsLine(id)){
+		getSameVetLabels(id);
+		//getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN, id, 1);
+		printVetDist();
+	}	
+
+}
+
+
+int rmLinkToID(int id){
+/*
+*  Note que para remover um enlace, três coisas precisam acontecer:
+*	1º O roteador que faz o pedido precisa remover as linhas e colunas referentes ao id excluído.
+*	2º Ao receber as mensagens de atualização do id removido, deve mandar uma mensagem de exclusão para o mesmo e desconsiderar a mensagem recebida.
+*	3º
+*/
+	if(id!=meID){
+		int x,i;
+		for(x = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN, id, 1); x<vetColumndistN-1; x++){
+			vetColumnLabels[x]=vetColumnLabels[x+1];
+			for(i=0; i<vetLinedistN; i++)
+				vetdist[i][x]=vetdist[i][x+1];
+		}
+		vetColumndistN--;
+		for(x = getVetLabel(vetLineLabels, &vetLinedistN,&vetColumndistN, id, 0); x<vetLinedistN-1; x++){
+			vetLineLabels[x]=vetLineLabels[x+1];
+			for(i=0; i<vetColumndistN; i++)
+				vetdist[x][i]=vetdist[x+1][i];			
+		}
+		vetLinedistN--;
+		return 1;
+	}
+	return 0;
+}
+
+
+
 int main2(int id){
-	//struct AdjList *graph[NIDS];
 	struct sockaddr_in si_dest;
 	int destPORT,destID;
 	int slen=sizeof(si_dest), recv_len;
@@ -551,13 +629,9 @@ int main2(int id){
 	static size_t messageSize = 100;
 
 	int i;
-	/*for(i=0; i<NIDS; i++)
-		graph[i] = NULL;
-		
-	startGraphFromFile(graph);*/
  
-    memset((char *) &si_dest, 0, sizeof(si_dest));
-    si_dest.sin_family = AF_INET;
+	memset((char *) &si_dest, 0, sizeof(si_dest));
+	si_dest.sin_family = AF_INET;
    
 
 	struct UDPMessage mes;
@@ -565,14 +639,21 @@ int main2(int id){
 	int LastMessID=0;
 	if(id==0){//Thread responsável por receber mensagens dos vizinhos
 		struct sockaddr_in si_other;
-		int recv_len, other_len = sizeof(si_other), destIDLabel;
+		int recv_len, other_len = sizeof(si_other), destIDLabel, ax;
+		sleep(4.0); /*Esse sleep serve para impedir que todos os nodos sejam identificados como inativos antes de inicializar os roteadores*/
 		while(1){
 			memset(buf,'\0', BUFLEN);
 			//try to receive some data, this is a blocking call
 			if ((recv_len=recvfrom(Socket, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &other_len)) == -1)
 				die("recvfrom()");
-			//printf("Recebi \"%s\"\n", buf);
-			//printf("Received packet{\"%s\"} from %s-%d:%d\n", buf,inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port),si_other.sin_port);
+			if(ax = getIDbyIPandPORT(inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port))){
+				if(!existsLine(ax)){
+					message = createMessage011(meID, ax);
+					if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
+							die("sendto()");				
+					continue;
+				}
+			}
 			if(buf[0]=='0'&&buf[1]=='0'&&buf[2]=='0'){
 				readMessage000(buf, &mes);
 				if(mes.idDest==meID){
@@ -595,8 +676,8 @@ int main2(int id){
 				if(mes.idDest==meID){
 					message = createMessage000(mes);
 					destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,mes.idOrig, 1);
+					printf("Nodo %d recebeu a mensagem #%d do nodo %d. Enviando confirmação de recebimento para o nodo %d com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,getIDbyIPandPORT(inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port)),nextLine[destIDLabel], mes.idOrig);
 					getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
-					printf("Nodo %d recebeu a mensagem #%d. Enviando confirmação de recebimento para o nodo %d com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idOrig);
 					fflush(stdout);
 					if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1)
 						die("sendto()");				
@@ -613,42 +694,65 @@ int main2(int id){
 			}
 			else
 				printf("Warning: Foi recebida mensagem do tipo %c%c%c, que é desconhecido.\n", buf[0], buf[1], buf[2]);
-			//printVetDist();
-			//printVetDist();
-			//printNextLine();
 		}
 	}
-	else if(id==1){
-		int destIDLabel;
+	else if(id==1){ //Thread responsável por mandar uma mensagem escrita pelo usuário para o destino escolhido
+		int destIDLabel, res;
 		while(1){
-			printf("Para qual roteador mandar a mensagem? ");
+			sleep(1.5);
+			printf("\n#%d - MENU : O que deseja fazer?\n1)Mandar mensagem para outro roteador\n2)Exibir o vetor distância\n3)Remover um enlace\n4)Adicionar um enlace\n", meID);
 			do{
-				scanf("%d", &destID);
-			}
-			while(destID==meID||destID<1);
-			getchar();
-			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
-			mes.idMes =  LastMessID++;
-			mes.idOrig = meID;
-			mes.idDest = destID;
-			mes.ttl = TTL;
-			destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,destID , 1);
-			getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
-			printf("Enter message : ");
-			//fflush(stdout);
-			getline(&message, &messageSize, stdin);
-			fflush(stdout); 
-			strcpy(mes.mess,message);
-			message = createMessage010(mes);
-			printNextLine();
+				printf("R: ");				
+				scanf("%d", &res);
+			}while(res<1||res>4);
+			
+			if(res==1){
+				do{
+					printf("Para qual roteador mandar a mensagem? ");
+					scanf("%d", &destID);
+				}
+				while(destID==meID||destID<0);
+				if(!destID)
+					continue;
+				getchar();
+				mes.idMes =  LastMessID++;
+				mes.idOrig = meID;
+				mes.idDest = destID;
+				mes.ttl = TTL;
+				destIDLabel = getVetLabel(vetColumnLabels, &vetColumndistN,&vetLinedistN,destID , 1);
+				getDestIPandPort(nextLine[destIDLabel],&destPORT, destIP,&si_dest);
+				printf("Enter message : ");
+				//fflush(stdout);
+				getline(&message, &messageSize, stdin);
+				fflush(stdout); 
+				strcpy(mes.mess,message);
+				message = createMessage010(mes);
+				printNextLine();
        	 
-			//send the message
-			printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,destIDLabel, mes.idDest);
-			printf("[%d]", si_dest.sin_port);
+				//send the message
+				printf("Nodo %d encaminhando mensagem #%d para o nodo %d, com destino final no nodo %d\n(O caminho percorrido aparecerá no outro terminal)\n", meID,mes.idMes,nextLine[destIDLabel], mes.idDest);
 			addConfs(mes.idMes, message);
-			if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1){
-				die("sendto()");
-			}//else printf("[%d]", si_dest.sin_port);
+				if (sendto(Socket, message, strlen(message) , 0 , (struct sockaddr *) &si_dest, slen)==-1){
+					die("sendto()");
+				}
+			}
+			else if(res==2)
+				printVetDist();
+			else if(res==3){
+				do{
+					printf("Qual enlace deseja remover? ");
+					scanf("%d", &destID);
+				}
+				while(destID==meID||destID<0);
+				if(!destID)
+					continue;
+				if(rmLinkToID(destID)){
+					printf("\nO enlace %d foi removido com sucesso!\n", destID);
+					printVetDist();
+				}
+				else
+					printf("\nNão foi possível remover o enlace %d\n", destID);
+			}
 		}
 	}
 	else if(id==2){	/*Thread responsável por dar sinal de vida aos vizinhos*/
@@ -657,20 +761,18 @@ int main2(int id){
 			sleep(2.5);
 			m = createMessage001();
 			for(i=0; i<vetLinedistN; i++){ 
-				if(vetLineLabels[i]==meID)//getVetLabels(meID))
+				if(vetLineLabels[i]==meID)
 					continue;
 				getDestIPandPort(vetLineLabels[i],&destPORT, destIP,&si_dest);
-				//printf("\n(%d Meid:%d Meport:%d{%d:%d})Mandando \"%s\" para id %d <%d>\n", vetLinedistN,meID,mePORT,si_me.sin_port,si_me.sin_addr.s_addr,m, vetLineLabels[i],si_dest.sin_port);
 				if(sendto(Socket, m, strlen(m) , 0 , (struct sockaddr *) &si_dest, sizeof(si_dest))==-1){
 							die("sendto()");
-				}//else printf("[%d %d]Sucesso: Mensagem mandada para %d %d\n",mePORT, htons(mePORT), si_dest.sin_port,si_dest.sin_port);
+				}
 			}
 		}
 	}
-	else{
+	else if(id==3){ //Thread responsável por verificar o timeout dos pacotes encaminhados, e por reencaminhá-los estes mesmos pacotes
 		int l,m, destIDLabel;
 		while(1){
-			//resetupDestStructures(&destNextID,graph,destFinalID,&destPORT, destIP, &si_dest);
 			struct messConfs *it = NULL;
 			while((it=getConfsN(it))!=NULL){
 				if(((int)time(NULL))>((int)it->time)+((int)TIMEOUT)){
@@ -690,6 +792,20 @@ int main2(int id){
 			}
 			sleep(2.5);
 		}
+	}
+	else{//Thread responsável por verificar quais vizinhos não mandam mais mensagens 001 periódicas, e por desligar estes mesmos vizinhos	
+				
+		int i;
+		while(1){
+			sleep(2.5);
+			for(i=0; i<vetLinedistN; i++)
+				if(vetLineLabels[i]!=meID&&((int)time(NULL))>((int)vetLineTimes[i])+((int)linkTimeOut)){
+					printf("Caiu o enlace para o roteador <%d>!!!",vetLineLabels[i]);fflush(stdout);
+					rmLinkToID(vetLineLabels[i]);
+				}
+			
+		}
+		
 	}		
 	//close(Socket);
 	return 0;
@@ -697,7 +813,7 @@ int main2(int id){
 
 void *mythread(void *data);
 
-#define N 4 // number of threads
+#define N 5 // number of threads
 
 /*Argumentos: 1: Número do cliente, 2: Quantidade de roteadores*/
 
@@ -722,20 +838,10 @@ int main(int argc2, char **argv2){
 	}
 	
 	configureAndBindMeStructures(argv[1]);
-	printVetDist();
 	startVetDistFromFile();
-	printVetDist();
-	/*printf("\n>%s<\n",createMessage001());
-	readMessage001("001|10|6|1|0|2|20|3|20|4|20|5|10|9|100|");
-	printVetDist();*/
 	
-	/*for(i=0; i<N; i++){
-		pthread_create(&tids[i], 0, mythread, (void*)i);
-	}*/
-
 	int id[10];
-	//pthread_t thread_tid[N];
-
+	
 	for(i = 0; i < N; i++) {
 		id[i] = i;
 		pthread_create(&tids[i], NULL, mythread, (void*)(id + i));
@@ -753,7 +859,7 @@ int main(int argc2, char **argv2){
 
 
 void *mythread(void *data) {
-	int *pidThread = (int *)data;//*((int *)data);
+	int *pidThread = (int *)data;
 	main2(*pidThread);
 	pthread_exit(NULL);
 }
